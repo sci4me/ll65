@@ -327,7 +327,8 @@ impl Assembler {
         (ror, ROR),
         (sbc, SBC),
         (sta, STA),
-        (stz, STZ)
+        (stz, STZ),
+        (bit, BIT)
     );
 
     generate_absolute_y_instructions!(
@@ -353,7 +354,8 @@ impl Assembler {
         (ldx, LDX),
         (ldy, LDY),
         (ora, ORA),
-        (sbc, SBC)
+        (sbc, SBC),
+        (bit, BIT)
     );
 
     generate_indirect_x_instructions!(
@@ -422,7 +424,8 @@ impl Assembler {
         (sbc, SBC),
         (sta, STA),
         (sty, STY),
-        (stz, STZ)
+        (stz, STZ),
+        (bit, BIT)
     );
 
     generate_zpy_instructions!(
@@ -830,7 +833,8 @@ mod tests {
         (ror, ROR),
         (sbc, SBC),
         (sta, STA),
-        (stz, STZ)
+        (stz, STZ),
+        (bit, BIT)
     );
 
     generate_absolute_y_instruction_tests!(
@@ -856,7 +860,8 @@ mod tests {
         (ldx, LDX),
         (ldy, LDY),
         (ora, ORA),
-        (sbc, SBC)
+        (sbc, SBC),
+        (bit, BIT)
     );
 
     generate_indirect_x_instruction_tests!(
@@ -924,7 +929,8 @@ mod tests {
         (sbc, SBC),
         (sta, STA),
         (sty, STY),
-        (stz, STZ)
+        (stz, STZ),
+        (bit, BIT)
     );
 
     generate_zpy_instruction_tests!(

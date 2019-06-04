@@ -59,7 +59,10 @@ pub enum OpCode {
     BEQ_REL = 0xF0,
 
     BIT_AB = 0x2C,
+    BIT_ABX = 0x3C,
     BIT_ZP = 0x24,
+    BIT_ZPX = 0x34,
+    BIT_IMM = 0x89,
 
     BMI_REL = 0x30,
     BNE_REL = 0xD0,
