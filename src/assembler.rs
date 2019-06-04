@@ -50,6 +50,19 @@ macro_rules! generate_absolute_instructions {
     }
 }
 
+macro_rules! generate_indirect_instructions {
+    ( $(($name:ident,$op:ident)),* ) => {
+        $(
+            paste::item! {
+                pub fn [<$name _indirect>](&mut self, address: u16) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _IN>] });
+                    self.writer.put_u16(address);
+                }
+            }
+        )*
+    }
+}
+
 macro_rules! generate_absolute_x_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
@@ -141,6 +154,19 @@ macro_rules! generate_zpx_instructions {
     }
 }
 
+macro_rules! generate_zpy_instructions {
+    ( $(($name:ident, $op:ident)),* ) => {
+        $(
+            paste::item! {
+                pub fn [<$name _zpy>](&mut self, address: u8) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _ZPY>] });
+                    self.writer.put_u8(address);
+                }
+            }
+        )*
+    }
+}
+
 macro_rules! generate_indirect_zp_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
@@ -180,12 +206,15 @@ impl Assembler {
         (cli, CLI),
         (clv, CLV),
         (dex, DEX),
-        (dey, DEY)
+        (dey, DEY),
+        (inx, INX),
+        (iny, INY)
     );
 
     generate_accumulator_instructions!(
         (asl, ASL),
-        (dec, DEC)
+        (dec, DEC),
+        (inc, INC)
     );
 
     generate_relative_instructions!(
@@ -207,7 +236,18 @@ impl Assembler {
         (cmp, CMP),
         (cpx, CPX),
         (cpy, CPY),
-        (dec, DEC)
+        (dec, DEC),
+        (eor, EOR),
+        (inc, INC),
+        (jmp, JMP),
+        (jsr, JSR),
+        (lda, LDA),
+        (ldx, LDX),
+        (ldy, LDY)
+    );
+
+    generate_indirect_instructions!(
+        (jmp, JMP)
     );
 
     generate_absolute_x_instructions!(
@@ -215,13 +255,21 @@ impl Assembler {
         (and, AND),
         (asl, ASL),
         (cmp, CMP),
-        (dec, DEC)
+        (dec, DEC),
+        (eor, EOR),
+        (inc, INC),
+        (jmp, JMP),
+        (lda, LDA),
+        (ldy, LDY)
     );
 
     generate_absolute_y_instructions!(
         (adc, ADC),
         (and, AND),
-        (cmp, CMP)
+        (cmp, CMP),
+        (eor, EOR),
+        (lda, LDA),
+        (ldx, LDX)
     );
 
     generate_immediate_instructions!(
@@ -229,19 +277,27 @@ impl Assembler {
         (and, AND),
         (cmp, CMP),
         (cpx, CPX),
-        (cpy, CPY)
+        (cpy, CPY),
+        (eor, EOR),
+        (lda, LDA),
+        (ldx, LDX),
+        (ldy, LDY)
     );
 
     generate_indirect_x_instructions!(
         (adc, ADC),
         (and, AND),
-        (cmp, CMP)
+        (cmp, CMP),
+        (eor, EOR),
+        (lda, LDA)
     );
 
     generate_indirect_y_instructions!(
         (adc, ADC),
         (and, AND),
-        (cmp, CMP)
+        (cmp, CMP),
+        (eor, EOR),
+        (lda, LDA)
     );
 
     generate_zp_instructions!(
@@ -252,7 +308,12 @@ impl Assembler {
         (cmp, CMP),
         (cpx, CPX),
         (cpy, CPY),
-        (dec, DEC)
+        (dec, DEC),
+        (eor, EOR),
+        (inc, INC),
+        (lda, LDA),
+        (ldx, LDX),
+        (ldy, LDY)
     );
 
     generate_zpx_instructions!(
@@ -260,13 +321,23 @@ impl Assembler {
         (and, AND),
         (asl, ASL),
         (cmp, CMP),
-        (dec, DEC)
+        (dec, DEC),
+        (eor, EOR),
+        (inc, INC),
+        (lda, LDA),
+        (ldy, LDY)
+    );
+
+    generate_zpy_instructions!(
+        (ldx, LDX)
     );
 
     generate_indirect_zp_instructions!(
         (adc, ADC),
         (and, AND),
-        (cmp, CMP)
+        (cmp, CMP),
+        (eor, EOR),
+        (lda, LDA)
     );
 }
 
@@ -336,6 +407,23 @@ mod tests {
                         paste::expr! { subject.[<$name _absolute>](256); }
 
                         assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _AB>] as u8, 0, 1] });
+                    }
+                }
+            )*
+        }
+    }
+
+    macro_rules! generate_indirect_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _indirect_works>]() {
+                        let mut subject = Assembler::new();
+
+                        paste::expr! { subject.[<$name _indirect>](256); }
+
+                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _IN>] as u8, 0, 1] });
                     }
                 }
             )*
@@ -461,6 +549,23 @@ mod tests {
         }
     }
 
+    macro_rules! generate_zpy_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _zpy_works>]() {
+                        let mut subject = Assembler::new();
+
+                        paste::expr! { subject.[<$name _zpy>](42); }
+
+                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _ZPY>] as u8, 42] });
+                    }
+                }
+            )*
+        }
+    }
+
     macro_rules! generate_indirect_zp_instruction_tests {
         ( $(($name:ident, $op:ident)),* ) => {
             $(
@@ -485,12 +590,15 @@ mod tests {
         (cli, CLI),
         (clv, CLV),
         (dex, DEX),
-        (dey, DEY)
+        (dey, DEY),
+        (inx, INX),
+        (iny, INY)
     );
 
     generate_accumulator_instruction_tests!(
         (asl, ASL),
-        (dec, DEC)
+        (dec, DEC),
+        (inc, INC)
     );
 
     generate_relative_instruction_tests!(
@@ -512,7 +620,18 @@ mod tests {
         (cmp, CMP),
         (cpx, CPX),
         (cpy, CPY),
-        (dec, DEC)
+        (dec, DEC),
+        (eor, EOR),
+        (inc, INC),
+        (jmp, JMP),
+        (jsr, JSR),
+        (lda, LDA),
+        (ldx, LDX),
+        (ldy, LDY)
+    );
+
+    generate_indirect_instruction_tests!(
+        (jmp, JMP)
     );
 
     generate_absolute_x_instruction_tests!(
@@ -520,13 +639,21 @@ mod tests {
         (and, AND),
         (asl, ASL),
         (cmp, CMP),
-        (dec, DEC)
+        (dec, DEC),
+        (eor, EOR),
+        (inc, INC),
+        (jmp, JMP),
+        (lda, LDA),
+        (ldy, LDY)
     );
 
     generate_absolute_y_instruction_tests!(
         (adc, ADC),
         (and, AND),
-        (cmp, CMP)
+        (cmp, CMP),
+        (eor, EOR),
+        (lda, LDA),
+        (ldx, LDX)
     );
 
     generate_immediate_instruction_tests!(
@@ -534,19 +661,27 @@ mod tests {
         (and, AND),
         (cmp, CMP),
         (cpx, CPX),
-        (cpy, CPY)
+        (cpy, CPY),
+        (eor, EOR),
+        (lda, LDA),
+        (ldx, LDX),
+        (ldy, LDY)
     );
 
     generate_indirect_x_instruction_tests!(
         (adc, ADC),
         (and, AND),
-        (cmp, CMP)
+        (cmp, CMP),
+        (eor, EOR),
+        (lda, LDA)
     );
 
     generate_indirect_y_instruction_tests!(
         (adc, ADC),
         (and, AND),
-        (cmp, CMP)
+        (cmp, CMP),
+        (eor, EOR),
+        (lda, LDA)
     );
 
     generate_zp_instruction_tests!(
@@ -557,7 +692,12 @@ mod tests {
         (cmp, CMP),
         (cpx, CPX),
         (cpy, CPY),
-        (dec, DEC)
+        (dec, DEC),
+        (eor, EOR),
+        (inc, INC),
+        (lda, LDA),
+        (ldx, LDX),
+        (ldy, LDY)
     );
 
     generate_zpx_instruction_tests!(
@@ -565,12 +705,22 @@ mod tests {
         (and, AND),
         (asl, ASL),
         (cmp, CMP),
-        (dec, DEC)
+        (dec, DEC),
+        (eor, EOR),
+        (inc, INC),
+        (lda, LDA),
+        (ldy, LDY)
+    );
+
+    generate_zpy_instruction_tests!(
+        (ldx, LDX)
     );
 
     generate_indirect_zp_instruction_tests!(
         (adc, ADC),
         (and, AND),
-        (cmp, CMP)
+        (cmp, CMP),
+        (eor, EOR),
+        (lda, LDA)
     );
 }
