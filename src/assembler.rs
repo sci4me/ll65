@@ -208,13 +208,19 @@ impl Assembler {
         (dex, DEX),
         (dey, DEY),
         (inx, INX),
-        (iny, INY)
+        (iny, INY),
+        (nop, NOP),
+        (pha, PHA),
+        (php, PHP),
+        (pla, PLA),
+        (plp, PLP)
     );
 
     generate_accumulator_instructions!(
         (asl, ASL),
         (dec, DEC),
-        (inc, INC)
+        (inc, INC),
+        (lsr, LSR)
     );
 
     generate_relative_instructions!(
@@ -243,7 +249,9 @@ impl Assembler {
         (jsr, JSR),
         (lda, LDA),
         (ldx, LDX),
-        (ldy, LDY)
+        (ldy, LDY),
+        (lsr, LSR),
+        (ora, ORA)
     );
 
     generate_indirect_instructions!(
@@ -260,7 +268,9 @@ impl Assembler {
         (inc, INC),
         (jmp, JMP),
         (lda, LDA),
-        (ldy, LDY)
+        (ldy, LDY),
+        (lsr, LSR),
+        (ora, ORA)
     );
 
     generate_absolute_y_instructions!(
@@ -269,7 +279,8 @@ impl Assembler {
         (cmp, CMP),
         (eor, EOR),
         (lda, LDA),
-        (ldx, LDX)
+        (ldx, LDX),
+        (ora, ORA)
     );
 
     generate_immediate_instructions!(
@@ -281,7 +292,8 @@ impl Assembler {
         (eor, EOR),
         (lda, LDA),
         (ldx, LDX),
-        (ldy, LDY)
+        (ldy, LDY),
+        (ora, ORA)
     );
 
     generate_indirect_x_instructions!(
@@ -289,7 +301,8 @@ impl Assembler {
         (and, AND),
         (cmp, CMP),
         (eor, EOR),
-        (lda, LDA)
+        (lda, LDA),
+        (ora, ORA)
     );
 
     generate_indirect_y_instructions!(
@@ -297,7 +310,8 @@ impl Assembler {
         (and, AND),
         (cmp, CMP),
         (eor, EOR),
-        (lda, LDA)
+        (lda, LDA),
+        (ora, ORA)
     );
 
     generate_zp_instructions!(
@@ -313,7 +327,9 @@ impl Assembler {
         (inc, INC),
         (lda, LDA),
         (ldx, LDX),
-        (ldy, LDY)
+        (ldy, LDY),
+        (lsr, LSR),
+        (ora, ORA)
     );
 
     generate_zpx_instructions!(
@@ -325,7 +341,9 @@ impl Assembler {
         (eor, EOR),
         (inc, INC),
         (lda, LDA),
-        (ldy, LDY)
+        (ldy, LDY),
+        (lsr, LSR),
+        (ora, ORA)
     );
 
     generate_zpy_instructions!(
@@ -337,7 +355,8 @@ impl Assembler {
         (and, AND),
         (cmp, CMP),
         (eor, EOR),
-        (lda, LDA)
+        (lda, LDA),
+        (ora, ORA)
     );
 }
 
@@ -592,13 +611,19 @@ mod tests {
         (dex, DEX),
         (dey, DEY),
         (inx, INX),
-        (iny, INY)
+        (iny, INY),
+        (nop, NOP),
+        (pha, PHA),
+        (php, PHP),
+        (pla, PLA),
+        (plp, PLP)
     );
 
     generate_accumulator_instruction_tests!(
         (asl, ASL),
         (dec, DEC),
-        (inc, INC)
+        (inc, INC),
+        (lsr, LSR)
     );
 
     generate_relative_instruction_tests!(
@@ -627,7 +652,9 @@ mod tests {
         (jsr, JSR),
         (lda, LDA),
         (ldx, LDX),
-        (ldy, LDY)
+        (ldy, LDY),
+        (lsr, LSR),
+        (ora, ORA)
     );
 
     generate_indirect_instruction_tests!(
@@ -644,7 +671,9 @@ mod tests {
         (inc, INC),
         (jmp, JMP),
         (lda, LDA),
-        (ldy, LDY)
+        (ldy, LDY),
+        (lsr, LSR),
+        (ora, ORA)
     );
 
     generate_absolute_y_instruction_tests!(
@@ -653,7 +682,8 @@ mod tests {
         (cmp, CMP),
         (eor, EOR),
         (lda, LDA),
-        (ldx, LDX)
+        (ldx, LDX),
+        (ora, ORA)
     );
 
     generate_immediate_instruction_tests!(
@@ -665,7 +695,8 @@ mod tests {
         (eor, EOR),
         (lda, LDA),
         (ldx, LDX),
-        (ldy, LDY)
+        (ldy, LDY),
+        (ora, ORA)
     );
 
     generate_indirect_x_instruction_tests!(
@@ -673,7 +704,8 @@ mod tests {
         (and, AND),
         (cmp, CMP),
         (eor, EOR),
-        (lda, LDA)
+        (lda, LDA),
+        (ora, ORA)
     );
 
     generate_indirect_y_instruction_tests!(
@@ -681,7 +713,8 @@ mod tests {
         (and, AND),
         (cmp, CMP),
         (eor, EOR),
-        (lda, LDA)
+        (lda, LDA),
+        (ora, ORA)
     );
 
     generate_zp_instruction_tests!(
@@ -697,7 +730,9 @@ mod tests {
         (inc, INC),
         (lda, LDA),
         (ldx, LDX),
-        (ldy, LDY)
+        (ldy, LDY),
+        (lsr, LSR),
+        (ora, ORA)
     );
 
     generate_zpx_instruction_tests!(
@@ -709,7 +744,9 @@ mod tests {
         (eor, EOR),
         (inc, INC),
         (lda, LDA),
-        (ldy, LDY)
+        (ldy, LDY),
+        (lsr, LSR),
+        (ora, ORA)
     );
 
     generate_zpy_instruction_tests!(
@@ -721,6 +758,7 @@ mod tests {
         (and, AND),
         (cmp, CMP),
         (eor, EOR),
-        (lda, LDA)
+        (lda, LDA),
+        (ora, ORA)
     );
 }
