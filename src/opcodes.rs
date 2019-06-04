@@ -225,7 +225,7 @@ pub enum OpCode {
     TXS = 0x9A,
     TYA = 0x98,
 
-    BRA = 0x80,
+    BRA_REL = 0x80,
 
     BBR0 = 0x0F,
     BBR1 = 0x1F,

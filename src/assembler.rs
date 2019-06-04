@@ -180,6 +180,29 @@ macro_rules! generate_indirect_zp_instructions {
     }
 }
 
+macro_rules! generate_bbr_style_instruction {
+    ( $(($name:ident, $op:ident)),* ) => {
+        $(
+            pub fn $name(&mut self, bit: u8) {
+                if bit > 7 {
+                    panic!("Expected bit value 0-7, got {}", bit);
+                }
+                match bit {
+                    0 => self.put_opcode(paste::expr! { OpCode::[<$op 0>] }),
+                    1 => self.put_opcode(paste::expr! { OpCode::[<$op 1>] }),
+                    2 => self.put_opcode(paste::expr! { OpCode::[<$op 2>] }),
+                    3 => self.put_opcode(paste::expr! { OpCode::[<$op 3>] }),
+                    4 => self.put_opcode(paste::expr! { OpCode::[<$op 4>] }),
+                    5 => self.put_opcode(paste::expr! { OpCode::[<$op 5>] }),
+                    6 => self.put_opcode(paste::expr! { OpCode::[<$op 6>] }),
+                    7 => self.put_opcode(paste::expr! { OpCode::[<$op 7>] }),
+                    _ => unreachable!()
+                }
+            }
+        )*
+    };
+}
+
 pub struct Assembler {
     writer: BinaryWriter
 }
@@ -213,14 +236,33 @@ impl Assembler {
         (pha, PHA),
         (php, PHP),
         (pla, PLA),
-        (plp, PLP)
+        (plp, PLP),
+        (rti, RTI),
+        (rts, RTS),
+        (sec, SEC),
+        (sed, SED),
+        (sei, SEI),
+        (tax, TAX),
+        (tay, TAY),
+        (tsx, TSX),
+        (txa, TXA),
+        (txs, TXS),
+        (tya, TYA),
+        (phx, PHX),
+        (phy, PHY),
+        (plx, PLX),
+        (ply, PLY),
+        (wai, WAI),
+        (stp, STP)
     );
 
     generate_accumulator_instructions!(
         (asl, ASL),
         (dec, DEC),
         (inc, INC),
-        (lsr, LSR)
+        (lsr, LSR),
+        (rol, ROL),
+        (ror, ROR)
     );
 
     generate_relative_instructions!(
@@ -231,7 +273,8 @@ impl Assembler {
         (bne, BNE),
         (bpl, BPL),
         (bvc, BVC),
-        (bvs, BVS)
+        (bvs, BVS),
+        (bra, BRA)
     );
 
     generate_absolute_instructions!(
@@ -251,7 +294,16 @@ impl Assembler {
         (ldx, LDX),
         (ldy, LDY),
         (lsr, LSR),
-        (ora, ORA)
+        (ora, ORA),
+        (rol, ROL),
+        (ror, ROR),
+        (sbc, SBC),
+        (sta, STA),
+        (stx, STX),
+        (sty, STY),
+        (trb, TRB),
+        (tsb, TSB),
+        (stz, STZ)
     );
 
     generate_indirect_instructions!(
@@ -270,7 +322,12 @@ impl Assembler {
         (lda, LDA),
         (ldy, LDY),
         (lsr, LSR),
-        (ora, ORA)
+        (ora, ORA),
+        (rol, ROL),
+        (ror, ROR),
+        (sbc, SBC),
+        (sta, STA),
+        (stz, STZ)
     );
 
     generate_absolute_y_instructions!(
@@ -280,7 +337,9 @@ impl Assembler {
         (eor, EOR),
         (lda, LDA),
         (ldx, LDX),
-        (ora, ORA)
+        (ora, ORA),
+        (sbc, SBC),
+        (sta, STA)
     );
 
     generate_immediate_instructions!(
@@ -293,7 +352,8 @@ impl Assembler {
         (lda, LDA),
         (ldx, LDX),
         (ldy, LDY),
-        (ora, ORA)
+        (ora, ORA),
+        (sbc, SBC)
     );
 
     generate_indirect_x_instructions!(
@@ -302,7 +362,9 @@ impl Assembler {
         (cmp, CMP),
         (eor, EOR),
         (lda, LDA),
-        (ora, ORA)
+        (ora, ORA),
+        (sbc, SBC),
+        (sta, STA)
     );
 
     generate_indirect_y_instructions!(
@@ -311,7 +373,9 @@ impl Assembler {
         (cmp, CMP),
         (eor, EOR),
         (lda, LDA),
-        (ora, ORA)
+        (ora, ORA),
+        (sbc, SBC),
+        (sta, STA)
     );
 
     generate_zp_instructions!(
@@ -329,7 +393,16 @@ impl Assembler {
         (ldx, LDX),
         (ldy, LDY),
         (lsr, LSR),
-        (ora, ORA)
+        (ora, ORA),
+        (rol, ROL),
+        (ror, ROR),
+        (sbc, SBC),
+        (sta, STA),
+        (stx, STX),
+        (sty, STY),
+        (trb, TRB),
+        (tsb, TSB),
+        (stz, STZ)
     );
 
     generate_zpx_instructions!(
@@ -343,11 +416,18 @@ impl Assembler {
         (lda, LDA),
         (ldy, LDY),
         (lsr, LSR),
-        (ora, ORA)
+        (ora, ORA),
+        (rol, ROL),
+        (ror, ROR),
+        (sbc, SBC),
+        (sta, STA),
+        (sty, STY),
+        (stz, STZ)
     );
 
     generate_zpy_instructions!(
-        (ldx, LDX)
+        (ldx, LDX),
+        (stx, STX)
     );
 
     generate_indirect_zp_instructions!(
@@ -356,7 +436,16 @@ impl Assembler {
         (cmp, CMP),
         (eor, EOR),
         (lda, LDA),
-        (ora, ORA)
+        (ora, ORA),
+        (sbc, SBC),
+        (sta, STA)
+    );
+
+    generate_bbr_style_instruction!(
+        (bbr, BBR),
+        (bbs, BBS),
+        (rmb, RMB),
+        (smb, SMB)
     );
 }
 
@@ -602,6 +691,41 @@ mod tests {
         }
     }
 
+    macro_rules! generate_bbr_style_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _works>]() {
+                        let mut subject = Assembler::new();
+
+                        subject.$name(0);
+                        subject.$name(1);
+                        subject.$name(2);
+                        subject.$name(3);
+                        subject.$name(4);
+                        subject.$name(5);
+                        subject.$name(6);
+                        subject.$name(7);
+
+                        assert_eq!(subject.assemble(), paste::expr! {
+                            &[
+                                OpCode::[<$op 0>] as u8,
+                                OpCode::[<$op 1>] as u8,
+                                OpCode::[<$op 2>] as u8,
+                                OpCode::[<$op 3>] as u8,
+                                OpCode::[<$op 4>] as u8,
+                                OpCode::[<$op 5>] as u8,
+                                OpCode::[<$op 6>] as u8,
+                                OpCode::[<$op 7>] as u8
+                            ]
+                        });
+                    }
+                }
+            )*
+        }
+    }
+
     generate_instruction_tests!(
         (brk, BRK),
         (clc, CLC),
@@ -616,14 +740,33 @@ mod tests {
         (pha, PHA),
         (php, PHP),
         (pla, PLA),
-        (plp, PLP)
+        (plp, PLP),
+        (rti, RTI),
+        (rts, RTS),
+        (sec, SEC),
+        (sed, SED),
+        (sei, SEI),
+        (tax, TAX),
+        (tay, TAY),
+        (tsx, TSX),
+        (txa, TXA),
+        (txs, TXS),
+        (tya, TYA),
+        (phx, PHX),
+        (phy, PHY),
+        (plx, PLX),
+        (ply, PLY),
+        (wai, WAI),
+        (stp, STP)
     );
 
     generate_accumulator_instruction_tests!(
         (asl, ASL),
         (dec, DEC),
         (inc, INC),
-        (lsr, LSR)
+        (lsr, LSR),
+        (rol, ROL),
+        (ror, ROR)
     );
 
     generate_relative_instruction_tests!(
@@ -634,7 +777,8 @@ mod tests {
         (bne, BNE),
         (bpl, BPL),
         (bvc, BVC),
-        (bvs, BVS)
+        (bvs, BVS),
+        (bra, BRA)
     );
 
     generate_absolute_instruction_tests!(
@@ -654,7 +798,15 @@ mod tests {
         (ldx, LDX),
         (ldy, LDY),
         (lsr, LSR),
-        (ora, ORA)
+        (ora, ORA),
+        (rol, ROL),
+        (ror, ROR),
+        (sbc, SBC),
+        (sta, STA),
+        (stx, STX),
+        (sty, STY),
+        (trb, TRB),
+        (tsb, TSB)
     );
 
     generate_indirect_instruction_tests!(
@@ -673,7 +825,12 @@ mod tests {
         (lda, LDA),
         (ldy, LDY),
         (lsr, LSR),
-        (ora, ORA)
+        (ora, ORA),
+        (rol, ROL),
+        (ror, ROR),
+        (sbc, SBC),
+        (sta, STA),
+        (stz, STZ)
     );
 
     generate_absolute_y_instruction_tests!(
@@ -683,7 +840,9 @@ mod tests {
         (eor, EOR),
         (lda, LDA),
         (ldx, LDX),
-        (ora, ORA)
+        (ora, ORA),
+        (sbc, SBC),
+        (sta, STA)
     );
 
     generate_immediate_instruction_tests!(
@@ -696,7 +855,8 @@ mod tests {
         (lda, LDA),
         (ldx, LDX),
         (ldy, LDY),
-        (ora, ORA)
+        (ora, ORA),
+        (sbc, SBC)
     );
 
     generate_indirect_x_instruction_tests!(
@@ -705,7 +865,9 @@ mod tests {
         (cmp, CMP),
         (eor, EOR),
         (lda, LDA),
-        (ora, ORA)
+        (ora, ORA),
+        (sbc, SBC),
+        (sta, STA)
     );
 
     generate_indirect_y_instruction_tests!(
@@ -714,7 +876,9 @@ mod tests {
         (cmp, CMP),
         (eor, EOR),
         (lda, LDA),
-        (ora, ORA)
+        (ora, ORA),
+        (sbc, SBC),
+        (sta, STA)
     );
 
     generate_zp_instruction_tests!(
@@ -732,7 +896,15 @@ mod tests {
         (ldx, LDX),
         (ldy, LDY),
         (lsr, LSR),
-        (ora, ORA)
+        (ora, ORA),
+        (rol, ROL),
+        (ror, ROR),
+        (sbc, SBC),
+        (sta, STA),
+        (stx, STX),
+        (sty, STY),
+        (trb, TRB),
+        (tsb, TSB)
     );
 
     generate_zpx_instruction_tests!(
@@ -746,11 +918,18 @@ mod tests {
         (lda, LDA),
         (ldy, LDY),
         (lsr, LSR),
-        (ora, ORA)
+        (ora, ORA),
+        (rol, ROL),
+        (ror, ROR),
+        (sbc, SBC),
+        (sta, STA),
+        (sty, STY),
+        (stz, STZ)
     );
 
     generate_zpy_instruction_tests!(
-        (ldx, LDX)
+        (ldx, LDX),
+        (stx, STX)
     );
 
     generate_indirect_zp_instruction_tests!(
@@ -759,6 +938,15 @@ mod tests {
         (cmp, CMP),
         (eor, EOR),
         (lda, LDA),
-        (ora, ORA)
+        (ora, ORA),
+        (sbc, SBC),
+        (sta, STA)
+    );
+
+    generate_bbr_style_instruction_tests!(
+        (bbr, BBR),
+        (bbs, BBS),
+        (rmb, RMB),
+        (smb, SMB)
     );
 }
