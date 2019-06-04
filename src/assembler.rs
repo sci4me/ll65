@@ -1,5 +1,135 @@
 use crate::binary_writer::BinaryWriter;
 use crate::opcodes::OpCode;
+use paste;
+
+macro_rules! generate_acc_instructions {
+    ( $(($name:ident,$op:ident)),* ) => {
+        $(
+            paste::item! {
+                pub fn [<$name _accumulator>](&mut self) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _ACC>] });
+                }
+            }
+        )*
+    }
+}
+
+macro_rules! generate_absolute_instructions {
+    ( $(($name:ident,$op:ident)),* ) => {
+        $(
+            paste::item! {
+                pub fn [<$name _absolute>](&mut self, address: u16) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _AB>] });
+                    self.writer.put_u16(address);
+                }
+            }
+        )*
+    }
+}
+
+macro_rules! generate_absolute_x_instructions {
+    ( $(($name:ident, $op:ident)),* ) => {
+        $(
+            paste::item! {
+                pub fn [<$name _absolute_x>](&mut self, address: u16) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _ABX>] });
+                    self.writer.put_u16(address);
+                }
+            }
+        )*
+    }
+}
+
+macro_rules! generate_absolute_y_instructions {
+    ( $(($name:ident, $op:ident)),* ) => {
+        $(
+            paste::item! {
+                pub fn [<$name _absolute_y>](&mut self, address: u16) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _ABY>] });
+                    self.writer.put_u16(address);
+                }
+            }
+        )*
+    }
+}
+
+macro_rules! generate_immediate_instructions {
+    ( $(($name:ident, $op:ident)),* ) => {
+        $(
+            paste::item! {
+                pub fn [<$name _immediate>](&mut self, value: u8) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _IMM>] });
+                    self.writer.put_u8(value);
+                }
+            }
+        )*
+    }
+}
+
+macro_rules! generate_indirect_x_instructions {
+    ( $(($name:ident, $op:ident)),* ) => {
+        $(
+            paste::item! {
+                pub fn [<$name _indirect_x>](&mut self, value: u8) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _INX>] });
+                    self.writer.put_u8(value);
+                }
+            }
+        )*
+    }
+}
+
+macro_rules! generate_indirect_y_instructions {
+    ( $(($name:ident, $op:ident)),* ) => {
+        $(
+            paste::item! {
+                pub fn [<$name _indirect_y>](&mut self, value: u8) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _INY>] });
+                    self.writer.put_u8(value);
+                }
+            }
+        )*
+    }
+}
+
+macro_rules! generate_zp_instructions {
+    ( $(($name:ident, $op:ident)),* ) => {
+        $(
+            paste::item! {
+                pub fn [<$name _zp>](&mut self, address: u8) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _ZP>] });
+                    self.writer.put_u8(address);
+                }
+            }
+        )*
+    }
+}
+
+macro_rules! generate_zpx_instructions {
+    ( $(($name:ident, $op:ident)),* ) => {
+        $(
+            paste::item! {
+                pub fn [<$name _zpx>](&mut self, address: u8) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _ZPX>] });
+                    self.writer.put_u8(address);
+                }
+            }
+        )*
+    }
+}
+
+macro_rules! generate_indirect_zp_instructions {
+    ( $(($name:ident, $op:ident)),* ) => {
+        $(
+            paste::item! {
+                pub fn [<$name _indirect_zp>](&mut self, address: u8) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _INZP>] });
+                    self.writer.put_u8(address);
+                }
+            }
+        )*
+    }
+}
 
 pub struct Assembler {
     writer: BinaryWriter
@@ -16,260 +146,282 @@ impl Assembler {
         self.writer.as_bytes()
     }
 
-    pub fn adc_absolute(&mut self, address: u16) {
-        self.writer.put_u8(OpCode::ADC_AB as u8);
-        self.writer.put_u16(address);
+    fn put_opcode(&mut self, opcode: OpCode) {
+        self.writer.put_u8(opcode as u8);
     }
 
-    pub fn adc_absolute_x(&mut self, address: u16) {
-        self.writer.put_u8(OpCode::ADC_ABX as u8);
-        self.writer.put_u16(address);
-    }
+    generate_acc_instructions!(
+        (asl, ASL)
+    );
 
-    pub fn adc_absolute_y(&mut self, address: u16) {
-        self.writer.put_u8(OpCode::ADC_ABY as u8);
-        self.writer.put_u16(address);
-    }
+    generate_absolute_instructions!(
+        (adc, ADC),
+        (and, AND),
+        (asl, ASL)
+    );
 
-    pub fn adc_immediate(&mut self, value: u8) {
-        self.writer.put_u8(OpCode::ADC_IMM as u8);
-        self.writer.put_u8(value);
-    }
+    generate_absolute_x_instructions!(
+        (adc, ADC),
+        (and, AND),
+        (asl, ASL)
+    );
 
-    pub fn adc_indirect_x(&mut self, value: u8) {
-        self.writer.put_u8(OpCode::ADC_INX as u8);
-        self.writer.put_u8(value);
-    }
+    generate_absolute_y_instructions!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-    pub fn adc_indirect_y(&mut self, value: u8) {
-        self.writer.put_u8(OpCode::ADC_INY as u8);
-        self.writer.put_u8(value);
-    }
+    generate_immediate_instructions!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-    pub fn adc_zp(&mut self, address: u8) {
-        self.writer.put_u8(OpCode::ADC_ZP as u8);
-        self.writer.put_u8(address);
-    }
+    generate_indirect_x_instructions!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-    pub fn adc_zpx(&mut self, address: u8) {
-        self.writer.put_u8(OpCode::ADC_ZPX as u8);
-        self.writer.put_u8(address);
-    }
+    generate_indirect_y_instructions!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-    pub fn adc_indirect_zp(&mut self, address: u8) {
-        self.writer.put_u8(OpCode::ADC_INZP as u8);
-        self.writer.put_u8(address);
-    }
-    
-    pub fn and_absolute(&mut self, address: u16) {
-        self.writer.put_u8(OpCode::AND_AB as u8);
-        self.writer.put_u16(address);
-    }
+    generate_zp_instructions!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-    pub fn and_absolute_x(&mut self, address: u16) {
-        self.writer.put_u8(OpCode::AND_ABX as u8);
-        self.writer.put_u16(address);
-    }
+    generate_zpx_instructions!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-    pub fn and_absolute_y(&mut self, address: u16) {
-        self.writer.put_u8(OpCode::AND_ABY as u8);
-        self.writer.put_u16(address);
-    }
-
-    pub fn and_immediate(&mut self, value: u8) {
-        self.writer.put_u8(OpCode::AND_IMM as u8);
-        self.writer.put_u8(value);
-    }
-
-    pub fn and_indirect_x(&mut self, value: u8) {
-        self.writer.put_u8(OpCode::AND_INX as u8);
-        self.writer.put_u8(value);
-    }
-
-    pub fn and_indirect_y(&mut self, value: u8) {
-        self.writer.put_u8(OpCode::AND_INY as u8);
-        self.writer.put_u8(value);
-    }
-
-    pub fn and_zp(&mut self, address: u8) {
-        self.writer.put_u8(OpCode::AND_ZP as u8);
-        self.writer.put_u8(address);
-    }
-
-    pub fn and_zpx(&mut self, address: u8) {
-        self.writer.put_u8(OpCode::AND_ZPX as u8);
-        self.writer.put_u8(address);
-    }
-
-    pub fn and_indirect_zp(&mut self, address: u8) {
-        self.writer.put_u8(OpCode::AND_INZP as u8);
-        self.writer.put_u8(address);
-    }
+    generate_indirect_zp_instructions!(
+        (adc, ADC),
+        (and, AND)
+    );
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn adc_absolute_works() {
-        let mut subject = Assembler::new();
+    macro_rules! generate_accumulator_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _accumulator_works>]() {
+                        let mut subject = Assembler::new();
 
-        subject.adc_absolute(256);
+                        paste::expr! { subject.[<$name _accumulator>](); }
 
-        assert_eq!(subject.assemble(), &[OpCode::ADC_AB as u8, 0, 1]);
+                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _ACC>] as u8] });
+                    }
+                }
+            )*
+        }
     }
 
-    #[test]
-    fn adc_absolute_x_works() {
-        let mut subject = Assembler::new();
+    macro_rules! generate_absolute_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _absolute_works>]() {
+                        let mut subject = Assembler::new();
 
-        subject.adc_absolute_x(256);
+                        paste::expr! { subject.[<$name _absolute>](256); }
 
-        assert_eq!(subject.assemble(), &[OpCode::ADC_ABX as u8, 0, 1]);
+                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _AB>] as u8, 0, 1] });
+                    }
+                }
+            )*
+        }
     }
 
-    #[test]
-    fn adc_absolute_y_works() {
-        let mut subject = Assembler::new();
+    macro_rules! generate_absolute_x_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _absolute_x_works>]() {
+                        let mut subject = Assembler::new();
 
-        subject.adc_absolute_y(256);
+                        paste::expr! { subject.[<$name _absolute_x>](256); }
 
-        assert_eq!(subject.assemble(), &[OpCode::ADC_ABY as u8, 0, 1]);
+                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _ABX>] as u8, 0, 1] });
+                    }
+                }
+            )*
+        }
     }
 
-    #[test]
-    fn adc_immediate_works() {
-        let mut subject = Assembler::new();
+    macro_rules! generate_absolute_y_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _absolute_y_works>]() {
+                        let mut subject = Assembler::new();
 
-        subject.adc_immediate(42);
+                        paste::expr! { subject.[<$name _absolute_y>](256); }
 
-        assert_eq!(subject.assemble(), &[OpCode::ADC_IMM as u8, 42]);
+                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _ABY>] as u8, 0, 1] });
+                    }
+                }
+            )*
+        }
     }
 
-    #[test]
-    fn adc_indirect_x_works() {
-        let mut subject = Assembler::new();
+    macro_rules! generate_immediate_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _immediate_works>]() {
+                        let mut subject = Assembler::new();
 
-        subject.adc_indirect_x(42);
+                        paste::expr! { subject.[<$name _immediate>](42); }
 
-        assert_eq!(subject.assemble(), &[OpCode::ADC_INX as u8, 42]);
+                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _IMM>] as u8, 42] });
+                    }
+                }
+            )*
+        }
     }
 
-    #[test]
-    fn adc_indirect_y_works() {
-        let mut subject = Assembler::new();
+    macro_rules! generate_indirect_x_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _indirect_x_works>]() {
+                        let mut subject = Assembler::new();
 
-        subject.adc_absolute_y(256);
+                        paste::expr! { subject.[<$name _indirect_x>](42); }
 
-        assert_eq!(subject.assemble(), &[OpCode::ADC_ABY as u8, 0, 1]);
+                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _INX>] as u8, 42] });
+                    }
+                }
+            )*
+        }
     }
 
-    #[test]
-    fn adc_zp_works() {
-        let mut subject = Assembler::new();
+    macro_rules! generate_indirect_y_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _indirect_y_works>]() {
+                        let mut subject = Assembler::new();
 
-        subject.adc_zp(42);
+                        paste::expr! { subject.[<$name _indirect_y>](42); }
 
-        assert_eq!(subject.assemble(), &[OpCode::ADC_ZP as u8, 42]);
+                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _INY>] as u8, 42] });
+                    }
+                }
+            )*
+        }
     }
 
-    #[test]
-    fn adc_zpx_works() {
-        let mut subject = Assembler::new();
+    macro_rules! generate_zp_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _zp_works>]() {
+                        let mut subject = Assembler::new();
 
-        subject.adc_zpx(42);
+                        paste::expr! { subject.[<$name _zp>](42); }
 
-        assert_eq!(subject.assemble(), &[OpCode::ADC_ZPX as u8, 42]);
+                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _ZP>] as u8, 42] });
+                    }
+                }
+            )*
+        }
     }
 
-    #[test]
-    fn adc_indirect_zp_works() {
-        let mut subject = Assembler::new();
+    macro_rules! generate_zpx_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _zpx_works>]() {
+                        let mut subject = Assembler::new();
 
-        subject.adc_indirect_zp(42);
+                        paste::expr! { subject.[<$name _zpx>](42); }
 
-        assert_eq!(subject.assemble(), &[OpCode::ADC_INZP as u8, 42]);
+                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _ZPX>] as u8, 42] });
+                    }
+                }
+            )*
+        }
     }
 
-    #[test]
-    fn and_absolute_works() {
-        let mut subject = Assembler::new();
+    macro_rules! generate_indirect_zp_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _indirect_zp_works>]() {
+                        let mut subject = Assembler::new();
 
-        subject.and_absolute(256);
+                        paste::expr! { subject.[<$name _indirect_zp>](42); }
 
-        assert_eq!(subject.assemble(), &[OpCode::AND_AB as u8, 0, 1]);
+                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _INZP>] as u8, 42] });
+                    }
+                }
+            )*
+        }
     }
 
-    #[test]
-    fn and_absolute_x_works() {
-        let mut subject = Assembler::new();
+    generate_accumulator_instruction_tests!(
+        (asl, ASL)
+    );
 
-        subject.and_absolute_x(256);
+    generate_absolute_instruction_tests!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-        assert_eq!(subject.assemble(), &[OpCode::AND_ABX as u8, 0, 1]);
-    }
+    generate_absolute_x_instruction_tests!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-    #[test]
-    fn and_absolute_y_works() {
-        let mut subject = Assembler::new();
+    generate_absolute_y_instruction_tests!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-        subject.and_absolute_y(256);
+    generate_immediate_instruction_tests!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-        assert_eq!(subject.assemble(), &[OpCode::AND_ABY as u8, 0, 1]);
-    }
+    generate_indirect_x_instruction_tests!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-    #[test]
-    fn and_immediate_works() {
-        let mut subject = Assembler::new();
+    generate_indirect_y_instruction_tests!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-        subject.and_immediate(42);
+    generate_zp_instruction_tests!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-        assert_eq!(subject.assemble(), &[OpCode::AND_IMM as u8, 42]);
-    }
+    generate_zpx_instruction_tests!(
+        (adc, ADC),
+        (and, AND)
+    );
 
-    #[test]
-    fn and_indirect_x_works() {
-        let mut subject = Assembler::new();
-
-        subject.and_indirect_x(42);
-
-        assert_eq!(subject.assemble(), &[OpCode::AND_INX as u8, 42]);
-    }
-
-    #[test]
-    fn and_indirect_y_works() {
-        let mut subject = Assembler::new();
-
-        subject.and_absolute_y(256);
-
-        assert_eq!(subject.assemble(), &[OpCode::AND_ABY as u8, 0, 1]);
-    }
-
-    #[test]
-    fn and_zp_works() {
-        let mut subject = Assembler::new();
-
-        subject.and_zp(42);
-
-        assert_eq!(subject.assemble(), &[OpCode::AND_ZP as u8, 42]);
-    }
-
-    #[test]
-    fn and_zpx_works() {
-        let mut subject = Assembler::new();
-
-        subject.and_zpx(42);
-
-        assert_eq!(subject.assemble(), &[OpCode::AND_ZPX as u8, 42]);
-    }
-
-    #[test]
-    fn and_indirect_zp_works() {
-        let mut subject = Assembler::new();
-
-        subject.and_indirect_zp(42);
-
-        assert_eq!(subject.assemble(), &[OpCode::AND_INZP as u8, 42]);
-    }
+    generate_indirect_zp_instruction_tests!(
+        (adc, ADC),
+        (and, AND)
+    );
 }
