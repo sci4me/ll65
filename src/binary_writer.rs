@@ -22,6 +22,11 @@ impl BinaryWriter {
         self.data.len() - 1
     }
 
+    pub fn put_i8(&mut self, value: i8) -> usize {
+        self.data.push(value as u8);
+        self.data.len() - 1
+    }
+
     pub fn put_u16(&mut self, value: u16) -> usize {
         let index = self.data.len();
         self.data.push((value & 0xFF) as u8);
@@ -85,6 +90,17 @@ mod tests {
 
         assert_eq!(subject.data[0], 42);
         assert_eq!(subject.data[1], 24);
+    }
+    
+    #[test]
+    fn put_i8_works() {
+        let mut subject = BinaryWriter::new();
+
+        assert_eq!(subject.put_u8(42), 0);
+        assert_eq!(subject.put_i8(-24), 1);
+
+        assert_eq!(subject.data[0], 42);
+        assert_eq!(subject.data[1], -24i8 as u8);
     }
 
     #[test]

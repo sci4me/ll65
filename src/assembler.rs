@@ -2,12 +2,35 @@ use crate::binary_writer::BinaryWriter;
 use crate::opcodes::OpCode;
 use paste;
 
+macro_rules! generate_instructions {
+    ( $(($name:ident,$op:ident)),* ) => {
+        $(
+            pub fn $name(&mut self) {
+                self.put_opcode(OpCode::$op);
+            }
+        )*
+    }
+}
+
 macro_rules! generate_acc_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
             paste::item! {
                 pub fn [<$name _accumulator>](&mut self) {
                     self.put_opcode(paste::expr! { OpCode::[<$op _ACC>] });
+                }
+            }
+        )*
+    }
+}
+
+macro_rules! generate_rel_instructions {
+    ( $(($name:ident,$op:ident)),* ) => {
+        $(
+            paste::item! {
+                pub fn [<$name _relative>](&mut self, offset: i8) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _REL>] });
+                    self.writer.put_i8(offset);
                 }
             }
         )*
@@ -150,14 +173,28 @@ impl Assembler {
         self.writer.put_u8(opcode as u8);
     }
 
+    generate_instructions!(
+        (brk, BRK)
+    );
+
     generate_acc_instructions!(
         (asl, ASL)
+    );
+
+    generate_rel_instructions!(
+        (bcc, BCC),
+        (bcs, BCS),
+        (beq, BEQ),
+        (bmi, BMI),
+        (bne, BNE),
+        (bpl, BPL)
     );
 
     generate_absolute_instructions!(
         (adc, ADC),
         (and, AND),
-        (asl, ASL)
+        (asl, ASL),
+        (bit, BIT)
     );
 
     generate_absolute_x_instructions!(
@@ -188,12 +225,15 @@ impl Assembler {
 
     generate_zp_instructions!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (asl, ASL),
+        (bit, BIT)
     );
 
     generate_zpx_instructions!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (asl, ASL)
     );
 
     generate_indirect_zp_instructions!(
@@ -206,6 +246,23 @@ impl Assembler {
 mod tests {
     use super::*;
 
+    macro_rules! generate_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _words>]() {
+                        let mut subject = Assembler::new();
+
+                        subject.$name();
+
+                        assert_eq!(subject.assemble(), &[OpCode::$op as u8]);
+                    }
+                }
+            )*
+        }
+    }
+
     macro_rules! generate_accumulator_instruction_tests {
         ( $(($name:ident, $op:ident)),* ) => {
             $(
@@ -217,6 +274,23 @@ mod tests {
                         paste::expr! { subject.[<$name _accumulator>](); }
 
                         assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _ACC>] as u8] });
+                    }
+                }
+            )*
+        }
+    }
+
+    macro_rules! generate_relative_instruction_tests {
+        ( $(($name:ident, $op:ident)),* ) => {
+            $(
+                paste::item! {
+                    #[test]
+                    fn [<$name _relative_works>]() {
+                        let mut subject = Assembler::new();
+
+                        paste::expr! { subject.[<$name _relative>](-2); }
+
+                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _REL>] as u8, -2i8 as u8] });
                     }
                 }
             )*
@@ -376,18 +450,34 @@ mod tests {
         }
     }
 
+    generate_instruction_tests!(
+        (brk, BRK)
+    );
+
     generate_accumulator_instruction_tests!(
         (asl, ASL)
     );
 
+    generate_relative_instruction_tests!(
+        (bcc, BCC),
+        (bcs, BCS),
+        (beq, BEQ),
+        (bmi, BMI),
+        (bne, BNE),
+        (bpl, BPL)
+    );
+
     generate_absolute_instruction_tests!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (asl, ASL),
+        (bit, BIT)
     );
 
     generate_absolute_x_instruction_tests!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (asl, ASL)
     );
 
     generate_absolute_y_instruction_tests!(
@@ -412,12 +502,15 @@ mod tests {
 
     generate_zp_instruction_tests!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (asl, ASL),
+        (bit, BIT)
     );
 
     generate_zpx_instruction_tests!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (asl, ASL)
     );
 
     generate_indirect_zp_instruction_tests!(
