@@ -12,7 +12,7 @@ macro_rules! generate_instructions {
     }
 }
 
-macro_rules! generate_acc_instructions {
+macro_rules! generate_accumulator_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
             paste::item! {
@@ -24,7 +24,7 @@ macro_rules! generate_acc_instructions {
     }
 }
 
-macro_rules! generate_rel_instructions {
+macro_rules! generate_relative_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
             paste::item! {
@@ -174,71 +174,99 @@ impl Assembler {
     }
 
     generate_instructions!(
-        (brk, BRK)
+        (brk, BRK),
+        (clc, CLC),
+        (cld, CLD),
+        (cli, CLI),
+        (clv, CLV),
+        (dex, DEX),
+        (dey, DEY)
     );
 
-    generate_acc_instructions!(
-        (asl, ASL)
+    generate_accumulator_instructions!(
+        (asl, ASL),
+        (dec, DEC)
     );
 
-    generate_rel_instructions!(
+    generate_relative_instructions!(
         (bcc, BCC),
         (bcs, BCS),
         (beq, BEQ),
         (bmi, BMI),
         (bne, BNE),
-        (bpl, BPL)
+        (bpl, BPL),
+        (bvc, BVC),
+        (bvs, BVS)
     );
 
     generate_absolute_instructions!(
         (adc, ADC),
         (and, AND),
         (asl, ASL),
-        (bit, BIT)
+        (bit, BIT),
+        (cmp, CMP),
+        (cpx, CPX),
+        (cpy, CPY),
+        (dec, DEC)
     );
 
     generate_absolute_x_instructions!(
         (adc, ADC),
         (and, AND),
-        (asl, ASL)
+        (asl, ASL),
+        (cmp, CMP),
+        (dec, DEC)
     );
 
     generate_absolute_y_instructions!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (cmp, CMP)
     );
 
     generate_immediate_instructions!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (cmp, CMP),
+        (cpx, CPX),
+        (cpy, CPY)
     );
 
     generate_indirect_x_instructions!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (cmp, CMP)
     );
 
     generate_indirect_y_instructions!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (cmp, CMP)
     );
 
     generate_zp_instructions!(
         (adc, ADC),
         (and, AND),
         (asl, ASL),
-        (bit, BIT)
+        (bit, BIT),
+        (cmp, CMP),
+        (cpx, CPX),
+        (cpy, CPY),
+        (dec, DEC)
     );
 
     generate_zpx_instructions!(
         (adc, ADC),
         (and, AND),
-        (asl, ASL)
+        (asl, ASL),
+        (cmp, CMP),
+        (dec, DEC)
     );
 
     generate_indirect_zp_instructions!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (cmp, CMP)
     );
 }
 
@@ -451,11 +479,18 @@ mod tests {
     }
 
     generate_instruction_tests!(
-        (brk, BRK)
+        (brk, BRK),
+        (clc, CLC),
+        (cld, CLD),
+        (cli, CLI),
+        (clv, CLV),
+        (dex, DEX),
+        (dey, DEY)
     );
 
     generate_accumulator_instruction_tests!(
-        (asl, ASL)
+        (asl, ASL),
+        (dec, DEC)
     );
 
     generate_relative_instruction_tests!(
@@ -464,57 +499,78 @@ mod tests {
         (beq, BEQ),
         (bmi, BMI),
         (bne, BNE),
-        (bpl, BPL)
+        (bpl, BPL),
+        (bvc, BVC),
+        (bvs, BVS)
     );
 
     generate_absolute_instruction_tests!(
         (adc, ADC),
         (and, AND),
         (asl, ASL),
-        (bit, BIT)
+        (bit, BIT),
+        (cmp, CMP),
+        (cpx, CPX),
+        (cpy, CPY),
+        (dec, DEC)
     );
 
     generate_absolute_x_instruction_tests!(
         (adc, ADC),
         (and, AND),
-        (asl, ASL)
+        (asl, ASL),
+        (cmp, CMP),
+        (dec, DEC)
     );
 
     generate_absolute_y_instruction_tests!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (cmp, CMP)
     );
 
     generate_immediate_instruction_tests!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (cmp, CMP),
+        (cpx, CPX),
+        (cpy, CPY)
     );
 
     generate_indirect_x_instruction_tests!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (cmp, CMP)
     );
 
     generate_indirect_y_instruction_tests!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (cmp, CMP)
     );
 
     generate_zp_instruction_tests!(
         (adc, ADC),
         (and, AND),
         (asl, ASL),
-        (bit, BIT)
+        (bit, BIT),
+        (cmp, CMP),
+        (cpx, CPX),
+        (cpy, CPY),
+        (dec, DEC)
     );
 
     generate_zpx_instruction_tests!(
         (adc, ADC),
         (and, AND),
-        (asl, ASL)
+        (asl, ASL),
+        (cmp, CMP),
+        (dec, DEC)
     );
 
     generate_indirect_zp_instruction_tests!(
         (adc, ADC),
-        (and, AND)
+        (and, AND),
+        (cmp, CMP)
     );
 }
