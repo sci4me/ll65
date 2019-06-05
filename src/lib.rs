@@ -21,9 +21,13 @@ mod tests {
         asm.rti();
 
         let reset = asm.cursor();
+        let main = asm.label();
+        asm.jmp_absolute(&main);
+        
+        asm.mark(&main);
         asm.sei();
 
-
+        
 
         asm.set_u16(NMI_VECTOR, nmi).unwrap();
         asm.set_u16(RESET_VECTOR, reset).unwrap();

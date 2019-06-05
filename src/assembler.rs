@@ -1,5 +1,6 @@
 use crate::binary_writer::BinaryWriter;
 use crate::opcodes::OpCode;
+use std::collections::HashMap;
 use paste;
 
 // @TODO: Error if we go over 64k
@@ -43,9 +44,9 @@ macro_rules! generate_absolute_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _absolute>](&mut self, address: u16) {
+                pub fn [<$name _absolute>](&mut self, address: &Ref) {
                     self.put_opcode(paste::expr! { OpCode::[<$op _AB>] });
-                    self.writer.put_u16(address);
+                    self.put_address(address);
                 }
             }
         )*
@@ -56,9 +57,9 @@ macro_rules! generate_indirect_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _indirect>](&mut self, address: u16) {
+                pub fn [<$name _indirect>](&mut self, address: &Ref) {
                     self.put_opcode(paste::expr! { OpCode::[<$op _IN>] });
-                    self.writer.put_u16(address);
+                    self.put_address(address);
                 }
             }
         )*
@@ -69,9 +70,9 @@ macro_rules! generate_absolute_x_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _absolute_x>](&mut self, address: u16) {
+                pub fn [<$name _absolute_x>](&mut self, address: &Ref) {
                     self.put_opcode(paste::expr! { OpCode::[<$op _ABX>] });
-                    self.writer.put_u16(address);
+                    self.put_address(address);
                 }
             }
         )*
@@ -82,9 +83,9 @@ macro_rules! generate_absolute_y_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _absolute_y>](&mut self, address: u16) {
+                pub fn [<$name _absolute_y>](&mut self, address: &Ref) {
                     self.put_opcode(paste::expr! { OpCode::[<$op _ABY>] });
-                    self.writer.put_u16(address);
+                    self.put_address(address);
                 }
             }
         )*
@@ -205,15 +206,55 @@ macro_rules! generate_bbr_style_instruction {
     };
 }
 
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
+pub enum Ref {
+    Label(u16),
+    Address(u16)
+}
+
 pub struct Assembler {
-    writer: BinaryWriter
+    writer: BinaryWriter,
+    next_label: u16,
+    patch_locations: HashMap<Ref, Vec<u16>>,
+    label_locations: HashMap<Ref, u16>
 }
 
 impl Assembler {
     pub fn new() -> Self {
         Self {
-            writer: BinaryWriter::new(0x10000)
+            writer: BinaryWriter::new(0x10000),
+            next_label: 0,
+            patch_locations: HashMap::new(),
+            label_locations: HashMap::new()
         }
+    }
+
+    fn put_address(&mut self, address :&Ref) {
+        match address {
+            Ref::Label(_) => {
+                let placeholder = self.writer.put_u16(0);
+                self.mark_patch_location(address.clone(), placeholder as u16);
+            },
+            Ref::Address(address) => {
+                self.writer.put_u16(*address);
+            }
+        }
+    }
+
+    fn mark_patch_location(&mut self, label: Ref, address: u16) {
+        match self.patch_locations.get_mut(&label) {
+            Some(locations) => { locations.push(address); },
+            None => { self.patch_locations.insert(label, vec![address]); }
+        }
+    }
+
+    pub fn assemble(&mut self) -> &[u8] {
+        for (k, v) in &self.label_locations {
+            for address in self.patch_locations.get(&k).expect(&format!("Unmarked patch: {:?}", k)) {
+                self.writer.set_u16(*address as usize, *v).unwrap();
+            }
+        }
+        self.writer.as_bytes()
     }
 
     pub fn len(&self) -> usize {
@@ -224,8 +265,20 @@ impl Assembler {
         self.writer.cursor() as u16
     }
 
-    pub fn assemble(&self) -> &[u8] {
-        self.writer.as_bytes()
+    pub fn label(&mut self) -> Ref {
+        let result = self.next_label;
+        self.next_label += 1;
+        Ref::Label(result)
+    }    
+
+    pub fn label_at(&mut self, address: u16) -> Ref {
+        let result = self.label();
+        self.label_locations.insert(result.clone(), address).unwrap();
+        result
+    }
+
+    pub fn mark(&mut self, label: &Ref) {
+        self.label_locations.insert(label.clone(), self.cursor());
     }
 
     pub fn set_u8(&mut self, address: u16, value: u8) -> Result<(), String> {
@@ -544,7 +597,7 @@ mod tests {
                     fn [<$name _absolute_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _absolute>](256); }
+                        paste::expr! { subject.[<$name _absolute>](&Ref::Address(256)); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _AB>] as u8 };
@@ -566,7 +619,7 @@ mod tests {
                     fn [<$name _indirect_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _indirect>](256); }
+                        paste::expr! { subject.[<$name _indirect>](&Ref::Address(256)); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _IN>] as u8 };
@@ -588,7 +641,7 @@ mod tests {
                     fn [<$name _absolute_x_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _absolute_x>](256); }
+                        paste::expr! { subject.[<$name _absolute_x>](&Ref::Address(256)); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ABX>] as u8 };
@@ -610,7 +663,7 @@ mod tests {
                     fn [<$name _absolute_y_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _absolute_y>](256); }
+                        paste::expr! { subject.[<$name _absolute_y>](&Ref::Address(256)); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ABY>] as u8 };
