@@ -23,7 +23,7 @@ impl BinaryWriter {
     }
 
     pub fn cursor(&self) -> usize {
-        self.cursor // @TODO @TESTME
+        self.cursor
     }
 
     pub fn as_bytes(&self) -> &[u8] {
