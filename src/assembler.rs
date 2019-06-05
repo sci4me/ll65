@@ -212,12 +212,16 @@ pub struct Assembler {
 impl Assembler {
     pub fn new() -> Self {
         Self {
-            writer: BinaryWriter::new(0xFFFF)
+            writer: BinaryWriter::new(0x10000)
         }
     }
 
-    pub fn len(&self) -> u16 {
-        self.writer.len() as u16
+    pub fn len(&self) -> usize {
+        self.writer.len()
+    }
+
+    pub fn cursor(&self) -> u16 {
+        self.writer.cursor() as u16
     }
 
     pub fn assemble(&self) -> &[u8] {
@@ -469,18 +473,19 @@ impl Assembler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::zero_vec_of_len;
 
     macro_rules! generate_instruction_tests {
         ( $(($name:ident, $op:ident)),* ) => {
             $(
                 paste::item! {
                     #[test]
-                    fn [<$name _words>]() {
+                    fn [<$name _works>]() {
                         let mut subject = Assembler::new();
 
                         subject.$name();
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = OpCode::$op as u8;
 
                         assert_eq!(subject.assemble(), expected.as_slice());
@@ -500,7 +505,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _accumulator>](); }
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ACC>] as u8 };
 
                         assert_eq!(subject.assemble(), expected.as_slice());
@@ -520,7 +525,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _relative>](-2); }
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _REL>] as u8 };
                         expected[1] = -2i8 as u8;
 
@@ -541,7 +546,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _absolute>](256); }
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _AB>] as u8 };
                         expected[1] = 0;
                         expected[2] = 1;
@@ -563,7 +568,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _indirect>](256); }
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _IN>] as u8 };
                         expected[1] = 0;
                         expected[2] = 1;
@@ -585,7 +590,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _absolute_x>](256); }
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ABX>] as u8 };
                         expected[1] = 0;
                         expected[2] = 1;
@@ -607,7 +612,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _absolute_y>](256); }
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ABY>] as u8 };
                         expected[1] = 0;
                         expected[2] = 1;
@@ -629,7 +634,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _immediate>](42); }
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _IMM>] as u8 };
                         expected[1] = 42;
 
@@ -650,7 +655,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _indirect_x>](42); }
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _INX>] as u8 };
                         expected[1] = 42;
 
@@ -671,7 +676,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _indirect_y>](42); }
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _INY>] as u8 };
                         expected[1] = 42;
 
@@ -692,7 +697,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _zp>](42); }
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ZP>] as u8 };
                         expected[1] = 42;
 
@@ -713,7 +718,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _zpx>](42); }
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ZPX>] as u8 };
                         expected[1] = 42;
 
@@ -734,7 +739,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _zpy>](42); }
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ZPY>] as u8 };
                         expected[1] = 42;
 
@@ -755,7 +760,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _indirect_zp>](42); }
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _INZP>] as u8 };
                         expected[1] = 42;
 
@@ -783,7 +788,7 @@ mod tests {
                         subject.$name(6);
                         subject.$name(7);
 
-                        let mut expected = vec![0u8; subject.len() as usize];
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op 0>] as u8 };
                         expected[1] = paste::expr! { OpCode::[<$op 1>] as u8 };
                         expected[2] = paste::expr! { OpCode::[<$op 2>] as u8 };

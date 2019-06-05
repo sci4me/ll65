@@ -1,3 +1,5 @@
+use crate::utils::zero_vec_of_len;
+
 pub struct BinaryWriter {
     data: Vec<u8>,
     cursor: usize
@@ -5,14 +7,10 @@ pub struct BinaryWriter {
 
 impl BinaryWriter {
     pub fn new(size: usize) -> Self {
-        let mut result = Self {
-            data: Vec::new(),
+        Self {
+            data: zero_vec_of_len(size),
             cursor: 0
-        };
-        for _ in 0..size {
-            result.data.push(0);
         }
-        result
     }
 
     fn push(&mut self, value: u8) {
@@ -106,7 +104,7 @@ mod tests {
         subject.put_u8(42);
         subject.put_u16(256);
 
-        let mut expected = vec![0u8; 100];
+        let mut expected = zero_vec_of_len(100);
         expected[0] = 42;
         expected[1] = 0;
         expected[2] = 1;
@@ -179,7 +177,7 @@ mod tests {
 
     #[test]
     fn set_u16_returns_an_error_if_index_is_out_of_bounds() {
-        let mut subject = BinaryWriter::new(0);
+        let mut subject = BinaryWriter::new(1);
 
         assert_eq!(subject.set_u16(4, 24), Err(String::from("Index out of bounds: 4")));
     }

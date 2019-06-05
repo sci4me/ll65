@@ -1,30 +1,36 @@
 pub mod binary_writer;
 pub mod opcodes;
 pub mod assembler;
-
+pub(crate) mod utils;
 
 #[cfg(test)]
 mod tests {
-    use super::assembler;
+    use super::assembler::*;
+    use super::opcodes::*;
     use std::fs::File;
     use std::io::Write;
 
     #[test]
     fn test() {
-        let mut asm = assembler::Assembler::new();
+        let mut asm = Assembler::new();
 
-        const NMI_VECTOR: u16 = 0xFFFA;
-        const RESET_VECTOR: u16 = 0xFFFC;
-        const IRQ_VECTOR: u16 = 0xFFFE;
+        let nmi = asm.cursor();
+        asm.rti();
 
+        let irq = asm.cursor();
+        asm.rti();
+
+        let reset = asm.cursor();
         asm.sei();
 
-        let entry = asm.len();
 
-        asm.set_u16(RESET_VECTOR, entry).unwrap();
+
+        asm.set_u16(NMI_VECTOR, nmi).unwrap();
+        asm.set_u16(RESET_VECTOR, reset).unwrap();
+        asm.set_u16(IRQ_VECTOR, irq).unwrap();
 
         let mut file = File::create("out.bin").unwrap();
         file.write(asm.assemble()).unwrap();
-        file.flush();
+        file.flush().unwrap();
     }
 }
