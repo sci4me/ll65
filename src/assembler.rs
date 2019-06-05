@@ -2,6 +2,8 @@ use crate::binary_writer::BinaryWriter;
 use crate::opcodes::OpCode;
 use paste;
 
+// @TODO: Error if we go over 64k
+
 macro_rules! generate_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
@@ -210,12 +212,24 @@ pub struct Assembler {
 impl Assembler {
     pub fn new() -> Self {
         Self {
-            writer: BinaryWriter::new()
+            writer: BinaryWriter::new(0xFFFF)
         }
+    }
+
+    pub fn len(&self) -> u16 {
+        self.writer.len() as u16
     }
 
     pub fn assemble(&self) -> &[u8] {
         self.writer.as_bytes()
+    }
+
+    pub fn set_u8(&mut self, address: u16, value: u8) -> Result<(), String> {
+        self.writer.set_u8(address as usize, value)
+    }
+
+    pub fn set_u16(&mut self, address: u16, value: u16) -> Result<(), String> {
+        self.writer.set_u16(address as usize, value)
     }
 
     fn put_opcode(&mut self, opcode: OpCode) {
@@ -466,7 +480,10 @@ mod tests {
 
                         subject.$name();
 
-                        assert_eq!(subject.assemble(), &[OpCode::$op as u8]);
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = OpCode::$op as u8;
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -483,7 +500,10 @@ mod tests {
 
                         paste::expr! { subject.[<$name _accumulator>](); }
 
-                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _ACC>] as u8] });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op _ACC>] as u8 };
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -500,7 +520,11 @@ mod tests {
 
                         paste::expr! { subject.[<$name _relative>](-2); }
 
-                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _REL>] as u8, -2i8 as u8] });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op _REL>] as u8 };
+                        expected[1] = -2i8 as u8;
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -517,7 +541,12 @@ mod tests {
 
                         paste::expr! { subject.[<$name _absolute>](256); }
 
-                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _AB>] as u8, 0, 1] });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op _AB>] as u8 };
+                        expected[1] = 0;
+                        expected[2] = 1;
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -534,7 +563,12 @@ mod tests {
 
                         paste::expr! { subject.[<$name _indirect>](256); }
 
-                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _IN>] as u8, 0, 1] });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op _IN>] as u8 };
+                        expected[1] = 0;
+                        expected[2] = 1;
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -551,7 +585,12 @@ mod tests {
 
                         paste::expr! { subject.[<$name _absolute_x>](256); }
 
-                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _ABX>] as u8, 0, 1] });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op _ABX>] as u8 };
+                        expected[1] = 0;
+                        expected[2] = 1;
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -568,7 +607,12 @@ mod tests {
 
                         paste::expr! { subject.[<$name _absolute_y>](256); }
 
-                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _ABY>] as u8, 0, 1] });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op _ABY>] as u8 };
+                        expected[1] = 0;
+                        expected[2] = 1;
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -585,7 +629,11 @@ mod tests {
 
                         paste::expr! { subject.[<$name _immediate>](42); }
 
-                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _IMM>] as u8, 42] });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op _IMM>] as u8 };
+                        expected[1] = 42;
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -602,7 +650,11 @@ mod tests {
 
                         paste::expr! { subject.[<$name _indirect_x>](42); }
 
-                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _INX>] as u8, 42] });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op _INX>] as u8 };
+                        expected[1] = 42;
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -619,7 +671,11 @@ mod tests {
 
                         paste::expr! { subject.[<$name _indirect_y>](42); }
 
-                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _INY>] as u8, 42] });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op _INY>] as u8 };
+                        expected[1] = 42;
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -636,7 +692,11 @@ mod tests {
 
                         paste::expr! { subject.[<$name _zp>](42); }
 
-                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _ZP>] as u8, 42] });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op _ZP>] as u8 };
+                        expected[1] = 42;
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -653,7 +713,11 @@ mod tests {
 
                         paste::expr! { subject.[<$name _zpx>](42); }
 
-                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _ZPX>] as u8, 42] });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op _ZPX>] as u8 };
+                        expected[1] = 42;
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -670,7 +734,11 @@ mod tests {
 
                         paste::expr! { subject.[<$name _zpy>](42); }
 
-                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _ZPY>] as u8, 42] });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op _ZPY>] as u8 };
+                        expected[1] = 42;
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -687,7 +755,11 @@ mod tests {
 
                         paste::expr! { subject.[<$name _indirect_zp>](42); }
 
-                        assert_eq!(subject.assemble(), paste::expr! { &[OpCode::[<$op _INZP>] as u8, 42] });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op _INZP>] as u8 };
+                        expected[1] = 42;
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
@@ -711,18 +783,17 @@ mod tests {
                         subject.$name(6);
                         subject.$name(7);
 
-                        assert_eq!(subject.assemble(), paste::expr! {
-                            &[
-                                OpCode::[<$op 0>] as u8,
-                                OpCode::[<$op 1>] as u8,
-                                OpCode::[<$op 2>] as u8,
-                                OpCode::[<$op 3>] as u8,
-                                OpCode::[<$op 4>] as u8,
-                                OpCode::[<$op 5>] as u8,
-                                OpCode::[<$op 6>] as u8,
-                                OpCode::[<$op 7>] as u8
-                            ]
-                        });
+                        let mut expected = vec![0u8; subject.len() as usize];
+                        expected[0] = paste::expr! { OpCode::[<$op 0>] as u8 };
+                        expected[1] = paste::expr! { OpCode::[<$op 1>] as u8 };
+                        expected[2] = paste::expr! { OpCode::[<$op 2>] as u8 };
+                        expected[3] = paste::expr! { OpCode::[<$op 3>] as u8 };
+                        expected[4] = paste::expr! { OpCode::[<$op 4>] as u8 };
+                        expected[5] = paste::expr! { OpCode::[<$op 5>] as u8 };
+                        expected[6] = paste::expr! { OpCode::[<$op 6>] as u8 };
+                        expected[7] = paste::expr! { OpCode::[<$op 7>] as u8 };
+
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
             )*
