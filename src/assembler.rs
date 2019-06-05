@@ -245,6 +245,10 @@ impl Assembler {
             None => { self.patch_locations.insert(label, vec![address]); }
         }
     }
+    
+    fn put_opcode(&mut self, opcode: OpCode) {
+        self.writer.put_u8(opcode as u8);
+    }
 
     pub fn assemble(&mut self) -> &[u8] {
         for (k, v) in &self.label_locations {
@@ -285,10 +289,6 @@ impl Assembler {
 
     pub fn set_u16(&mut self, address: u16, value: u16) -> Result<(), String> {
         self.writer.set_u16(address as usize, value)
-    }
-
-    fn put_opcode(&mut self, opcode: OpCode) {
-        self.writer.put_u8(opcode as u8);
     }
 
     generate_instructions!(
