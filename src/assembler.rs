@@ -239,7 +239,7 @@ impl Assembler {
         }
     }
 
-    fn mark_patch_location(&mut self, label: Ref, address: u16) 
+    fn mark_patch_location(&mut self, label: Ref, address: u16) {
         match self.patch_locations.get_mut(&label) {
             Some(locations) => { locations.push(address); },
             None => { self.patch_locations.insert(label, vec![address]); }
