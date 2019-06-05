@@ -229,7 +229,7 @@ impl Assembler {
         }
     }
 
-    fn put_address(&mut self, address :&Ref) {
+    fn put_address(&mut self, address :&Ref) { // @TODO @TESTME
         match address {
             Ref::Label(_) => {
                 let placeholder = self.writer.put_u16(0);
@@ -241,14 +241,14 @@ impl Assembler {
         }
     }
 
-    fn mark_patch_location(&mut self, label: Ref, address: u16) {
+    fn mark_patch_location(&mut self, label: Ref, address: u16) { // @TODO @TESTME
         match self.patch_locations.get_mut(&label) {
             Some(locations) => { locations.push(address); },
             None => { self.patch_locations.insert(label, vec![address]); }
         }
     }
 
-    pub fn assemble(&mut self) -> &[u8] {
+    pub fn assemble(&mut self) -> &[u8] { // @TODO @TESTME
         for (k, v) in &self.label_locations {
             for address in self.patch_locations.get(&k).expect(&format!("Unmarked patch: {:?}", k)) {
                 self.writer.set_u16(*address as usize, *v).unwrap();
@@ -265,19 +265,19 @@ impl Assembler {
         self.writer.cursor() as u16
     }
 
-    pub fn label(&mut self) -> Ref {
+    pub fn label(&mut self) -> Ref { // @TODO @TESTME
         let result = self.next_label;
         self.next_label += 1;
         Ref::Label(result)
     }    
 
-    pub fn label_at(&mut self, address: u16) -> Ref {
+    pub fn label_at(&mut self, address: u16) -> Ref { // @TODO @TESTME
         let result = self.label();
         self.label_locations.insert(result.clone(), address).unwrap();
         result
     }
 
-    pub fn mark(&mut self, label: &Ref) {
+    pub fn mark(&mut self, label: &Ref) { // @TODO @TESTME
         self.label_locations.insert(label.clone(), self.cursor());
     }
 
