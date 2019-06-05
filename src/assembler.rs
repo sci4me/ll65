@@ -3,8 +3,6 @@ use crate::opcodes::OpCode;
 use std::collections::HashMap;
 use paste;
 
-// @TODO: Error if we go over 64k
-
 macro_rules! generate_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
@@ -229,7 +227,7 @@ impl Assembler {
         }
     }
 
-    fn put_address(&mut self, address :&Ref) { // @TODO @TESTME
+    fn put_address(&mut self, address :&Ref) {
         match address {
             Ref::Label(_) => {
                 let placeholder = self.writer.put_u16(0);
@@ -241,14 +239,14 @@ impl Assembler {
         }
     }
 
-    fn mark_patch_location(&mut self, label: Ref, address: u16) { // @TODO @TESTME
+    fn mark_patch_location(&mut self, label: Ref, address: u16) 
         match self.patch_locations.get_mut(&label) {
             Some(locations) => { locations.push(address); },
             None => { self.patch_locations.insert(label, vec![address]); }
         }
     }
 
-    pub fn assemble(&mut self) -> &[u8] { // @TODO @TESTME
+    pub fn assemble(&mut self) -> &[u8] {
         for (k, v) in &self.label_locations {
             for address in self.patch_locations.get(&k).expect(&format!("Unmarked patch: {:?}", k)) {
                 self.writer.set_u16(*address as usize, *v).unwrap();
@@ -265,19 +263,19 @@ impl Assembler {
         self.writer.cursor() as u16
     }
 
-    pub fn label(&mut self) -> Ref { // @TODO @TESTME
+    pub fn label(&mut self) -> Ref {
         let result = self.next_label;
         self.next_label += 1;
         Ref::Label(result)
     }    
 
-    pub fn label_at(&mut self, address: u16) -> Ref { // @TODO @TESTME
+    pub fn label_at(&mut self, address: u16) -> Ref {
         let result = self.label();
         self.label_locations.insert(result.clone(), address).unwrap();
         result
     }
 
-    pub fn mark(&mut self, label: &Ref) { // @TODO @TESTME
+    pub fn mark(&mut self, label: &Ref) {
         self.label_locations.insert(label.clone(), self.cursor());
     }
 
@@ -1084,4 +1082,27 @@ mod tests {
         (rmb, RMB),
         (smb, SMB)
     );
+
+    #[test]
+    fn labels_work() {
+        let mut subject = Assembler::new();
+
+        subject.sei();
+
+        let label = subject.label();
+        subject.jmp_absolute(&label);
+
+        subject.cli();
+
+        subject.mark(&label);
+
+        let mut expected = zero_vec_of_len(subject.len());
+        expected[0] = OpCode::SEI as u8;
+        expected[1] = OpCode::JMP_AB as u8;
+        expected[2] = 5;
+        expected[3] = 0;
+        expected[4] = OpCode::CLI as u8;
+
+        assert_eq!(subject.assemble(), expected.as_slice());
+    }
 }
