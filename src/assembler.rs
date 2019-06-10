@@ -317,7 +317,7 @@ impl Assembler {
                     self.writer.set_u16(*location as usize, *address).unwrap();
                 }
             } else {
-                panic!("Unmarked label: {:?}", label);
+                panic!("Unmarked label: {}", label);
             }
         }
     }
@@ -331,7 +331,7 @@ impl Assembler {
                     relative_patches.push((*address, *location));
                 }
             } else {
-                panic!("Unmarked label: {:?}", label);
+                panic!("Unmarked label: {}", label);
             }
         }
 
@@ -377,7 +377,7 @@ impl Assembler {
 
     pub fn mark(&mut self, label: Ref) {
         if self.label_locations.contains_key(&label) {
-            panic!("Label {:?} alread marked!", label);
+            panic!("Label {} alread marked!", label);
         }
 
         self.label_locations.insert(label.clone(), self.cursor());
