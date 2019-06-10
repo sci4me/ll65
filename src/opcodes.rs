@@ -95,7 +95,7 @@ pub enum OpCode {
     CPY_AB = 0xCC,
     CPY_IMM = 0xC0,
     CPY_ZP = 0xC4,
-    
+
     DEC_ACC = 0x3A,
     DEC_AB = 0xCE,
     DEC_ABX = 0xDE,
@@ -283,7 +283,7 @@ pub enum OpCode {
     PLY = 0x7A,
 
     WAI = 0xCB,
-    STP = 0xDB
+    STP = 0xDB,
 }
 
 pub const NMI_VECTOR: u16 = 0xFFFA;

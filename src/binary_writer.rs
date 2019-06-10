@@ -2,14 +2,14 @@ use crate::utils::zero_vec_of_len;
 
 pub struct BinaryWriter {
     data: Vec<u8>,
-    cursor: usize
+    cursor: usize,
 }
 
 impl BinaryWriter {
     pub fn new(size: usize) -> Self {
         Self {
             data: zero_vec_of_len(size),
-            cursor: 0
+            cursor: 0,
         }
     }
 
@@ -131,7 +131,7 @@ mod tests {
         assert_eq!(subject.data[0], 42);
         assert_eq!(subject.data[1], 24);
     }
-    
+
     #[test]
     fn put_i8_works() {
         let mut subject = BinaryWriter::new(100);
@@ -180,7 +180,10 @@ mod tests {
     fn set_u8_returns_an_error_if_index_is_out_of_bounds() {
         let mut subject = BinaryWriter::new(5);
 
-        assert_eq!(subject.set_u8(42, 24), Err(String::from("Index out of bounds: 42")));
+        assert_eq!(
+            subject.set_u8(42, 24),
+            Err(String::from("Index out of bounds: 42"))
+        );
     }
 
     #[test]
@@ -199,6 +202,9 @@ mod tests {
     fn set_u16_returns_an_error_if_index_is_out_of_bounds() {
         let mut subject = BinaryWriter::new(1);
 
-        assert_eq!(subject.set_u16(4, 24), Err(String::from("Index out of bounds: 4")));
+        assert_eq!(
+            subject.set_u16(4, 24),
+            Err(String::from("Index out of bounds: 4"))
+        );
     }
 }

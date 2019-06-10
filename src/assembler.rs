@@ -1,7 +1,19 @@
 use crate::binary_writer::BinaryWriter;
 use crate::opcodes::OpCode;
-use std::collections::HashMap;
 use paste;
+use std::collections::HashMap;
+
+#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
+pub enum Ref {
+    Label(u16),
+    Address(u16),
+}
+
+impl Into<Ref> for u16 {
+    fn into(self) -> Ref {
+        Ref::Address(self)
+    }
+}
 
 macro_rules! generate_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
@@ -29,9 +41,9 @@ macro_rules! generate_relative_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _relative>](&mut self, address: &Ref) {
+                pub fn [<$name _relative>]<T: Into<Ref>>(&mut self, address: T) {
                     self.put_opcode(paste::expr! { OpCode::[<$op _REL>] });
-                    self.put_relative_address(address);
+                    self.put_relative_address(address.into());
                 }
 
                 pub fn [<$name _relative_immediate>](&mut self, offset: i8) {
@@ -47,9 +59,9 @@ macro_rules! generate_absolute_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _absolute>](&mut self, address: &Ref) {
+                pub fn [<$name _absolute>]<T: Into<Ref>>(&mut self, address: T) {
                     self.put_opcode(paste::expr! { OpCode::[<$op _AB>] });
-                    self.put_address(address);
+                    self.put_address(address.into());
                 }
             }
         )*
@@ -60,9 +72,9 @@ macro_rules! generate_indirect_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _indirect>](&mut self, address: &Ref) {
+                pub fn [<$name _indirect>]<T: Into<Ref>>(&mut self, address: T) {
                     self.put_opcode(paste::expr! { OpCode::[<$op _IN>] });
-                    self.put_address(address);
+                    self.put_address(address.into());
                 }
             }
         )*
@@ -73,9 +85,9 @@ macro_rules! generate_absolute_x_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _absolute_x>](&mut self, address: &Ref) {
+                pub fn [<$name _absolute_x>]<T: Into<Ref>>(&mut self, address: T) {
                     self.put_opcode(paste::expr! { OpCode::[<$op _ABX>] });
-                    self.put_address(address);
+                    self.put_address(address.into());
                 }
             }
         )*
@@ -86,9 +98,9 @@ macro_rules! generate_absolute_y_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _absolute_y>](&mut self, address: &Ref) {
+                pub fn [<$name _absolute_y>]<T: Into<Ref>>(&mut self, address: T) {
                     self.put_opcode(paste::expr! { OpCode::[<$op _ABY>] });
-                    self.put_address(address);
+                    self.put_address(address.into());
                 }
             }
         )*
@@ -209,18 +221,12 @@ macro_rules! generate_bbr_style_instruction {
     };
 }
 
-#[derive(PartialEq, Eq, Hash, Debug, Clone)]
-pub enum Ref {
-    Label(u16),
-    Address(u16)
-}
-
 pub struct Assembler {
     writer: BinaryWriter,
     next_label: u16,
     patch_locations: HashMap<Ref, Vec<u16>>,
     relative_patch_locations: HashMap<Ref, Vec<u16>>,
-    label_locations: HashMap<Ref, u16>
+    label_locations: HashMap<Ref, u16>,
 }
 
 impl Assembler {
@@ -230,45 +236,53 @@ impl Assembler {
             next_label: 0,
             patch_locations: HashMap::new(),
             relative_patch_locations: HashMap::new(),
-            label_locations: HashMap::new()
+            label_locations: HashMap::new(),
         }
     }
 
-    fn put_address(&mut self, address:&Ref) {
+    fn put_address(&mut self, address: Ref) {
         match address {
             Ref::Label(_) => {
                 let placeholder = self.writer.put_u16(0);
                 self.mark_patch_location(address.clone(), placeholder as u16);
-            },
+            }
             Ref::Address(address) => {
-                self.writer.put_u16(*address);
+                self.writer.put_u16(address);
             }
         }
     }
 
-    fn put_relative_address(&mut self, address: &Ref) {
+    fn put_relative_address(&mut self, address: Ref) {
         let placeholder = self.writer.put_i8(0);
         match address {
             Ref::Label(_) => {
                 self.mark_relative_patch_location(address.clone(), placeholder as u16);
-            },
+            }
             Ref::Address(address) => {
-                self.patch_relative(*address, placeholder as u16);
+                self.patch_relative(address, placeholder as u16);
             }
         }
     }
 
     fn mark_patch_location(&mut self, label: Ref, address: u16) {
         match self.patch_locations.get_mut(&label) {
-            Some(locations) => { locations.push(address); },
-            None => { self.patch_locations.insert(label, vec![address]); }
+            Some(locations) => {
+                locations.push(address);
+            }
+            None => {
+                self.patch_locations.insert(label, vec![address]);
+            }
         }
     }
-    
+
     fn mark_relative_patch_location(&mut self, label: Ref, address: u16) {
         match self.relative_patch_locations.get_mut(&label) {
-            Some(locations) => { locations.push(address); },
-            None => { self.relative_patch_locations.insert(label, vec![address]); }
+            Some(locations) => {
+                locations.push(address);
+            }
+            None => {
+                self.relative_patch_locations.insert(label, vec![address]);
+            }
         }
     }
 
@@ -334,19 +348,28 @@ impl Assembler {
         let result = self.next_label;
         self.next_label += 1;
         Ref::Label(result)
-    }    
+    }
 
     pub fn label_at(&mut self, address: u16) -> Ref {
         let result = self.label();
-        self.label_locations.insert(result.clone(), address).unwrap();
+        self.label_locations
+            .insert(result.clone(), address)
+            .unwrap();
         result
     }
 
-    pub fn resolve(&self, label: &Ref) -> Option<u16> {
-        self.label_locations.get(label).map(|x| *x)
+    pub fn resolve(&self, label: Ref) -> Option<u16> {
+        match label {
+            Ref::Label(_) => self.label_locations.get(&label).map(|x| *x),
+            Ref::Address(x) => Some(x)
+        }
     }
 
-    pub fn mark(&mut self, label: &Ref) {
+    pub fn mark(&mut self, label: Ref) {
+        if self.label_locations.contains_key(&label) {
+            panic!("Label {:?} alread marked!", label);
+        }
+
         self.label_locations.insert(label.clone(), self.cursor());
     }
 
@@ -442,9 +465,7 @@ impl Assembler {
         (stz, STZ)
     );
 
-    generate_indirect_instructions!(
-        (jmp, JMP)
-    );
+    generate_indirect_instructions!((jmp, JMP));
 
     generate_absolute_x_instructions!(
         (adc, ADC),
@@ -564,10 +585,7 @@ impl Assembler {
         (bit, BIT)
     );
 
-    generate_zpy_instructions!(
-        (ldx, LDX),
-        (stx, STX)
-    );
+    generate_zpy_instructions!((ldx, LDX), (stx, STX));
 
     generate_indirect_zp_instructions!(
         (adc, ADC),
@@ -580,12 +598,7 @@ impl Assembler {
         (sta, STA)
     );
 
-    generate_bbr_style_instruction!(
-        (bbr, BBR),
-        (bbs, BBS),
-        (rmb, RMB),
-        (smb, SMB)
-    );
+    generate_bbr_style_instruction!((bbr, BBR), (bbs, BBS), (rmb, RMB), (smb, SMB));
 }
 
 #[cfg(test)]
@@ -642,15 +655,15 @@ mod tests {
                         let mut subject = Assembler::new();
 
                         let l = subject.label();
-                        subject.mark(&l);
-                        
-                        paste::expr! { subject.[<$name _relative>](&l); }
+                        subject.mark(l);
+
+                        paste::expr! { subject.[<$name _relative>](l); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _REL>] as u8 };
                         expected[1] = -2i8 as u8;
 
-                        assert_eq!(subject.assemble(), expected.as_slice()); 
+                        assert_eq!(subject.assemble(), expected.as_slice());
                     }
                 }
 
@@ -680,7 +693,7 @@ mod tests {
                     fn [<$name _absolute_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _absolute>](&Ref::Address(256)); }
+                        paste::expr! { subject.[<$name _absolute>](256); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _AB>] as u8 };
@@ -702,7 +715,7 @@ mod tests {
                     fn [<$name _indirect_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _indirect>](&Ref::Address(256)); }
+                        paste::expr! { subject.[<$name _indirect>](256); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _IN>] as u8 };
@@ -724,7 +737,7 @@ mod tests {
                     fn [<$name _absolute_x_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _absolute_x>](&Ref::Address(256)); }
+                        paste::expr! { subject.[<$name _absolute_x>](256); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ABX>] as u8 };
@@ -746,7 +759,7 @@ mod tests {
                     fn [<$name _absolute_y_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _absolute_y>](&Ref::Address(256)); }
+                        paste::expr! { subject.[<$name _absolute_y>](256); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ABY>] as u8 };
@@ -1024,9 +1037,7 @@ mod tests {
         (tsb, TSB)
     );
 
-    generate_indirect_instruction_tests!(
-        (jmp, JMP)
-    );
+    generate_indirect_instruction_tests!((jmp, JMP));
 
     generate_absolute_x_instruction_tests!(
         (adc, ADC),
@@ -1145,10 +1156,7 @@ mod tests {
         (bit, BIT)
     );
 
-    generate_zpy_instruction_tests!(
-        (ldx, LDX),
-        (stx, STX)
-    );
+    generate_zpy_instruction_tests!((ldx, LDX), (stx, STX));
 
     generate_indirect_zp_instruction_tests!(
         (adc, ADC),
@@ -1161,12 +1169,12 @@ mod tests {
         (sta, STA)
     );
 
-    generate_bbr_style_instruction_tests!(
-        (bbr, BBR),
-        (bbs, BBS),
-        (rmb, RMB),
-        (smb, SMB)
-    );
+    generate_bbr_style_instruction_tests!((bbr, BBR), (bbs, BBS), (rmb, RMB), (smb, SMB));
+
+    #[test]
+    fn u16_into_ref_works() {
+        assert_eq!(Ref::Address(1234), 1234.into());
+    }
 
     #[test]
     fn labels_work() {
@@ -1175,11 +1183,11 @@ mod tests {
         subject.sei();
 
         let label = subject.label();
-        subject.jmp_absolute(&label);
+        subject.jmp_absolute(label);
 
         subject.cli();
 
-        subject.mark(&label);
+        subject.mark(label);
 
         let mut expected = zero_vec_of_len(subject.len());
         expected[0] = OpCode::SEI as u8;
