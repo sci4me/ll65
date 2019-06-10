@@ -247,13 +247,13 @@ impl Assembler {
     }
 
     fn put_relative_address(&mut self, address: &Ref) {
+        let placeholder = self.writer.put_i8(0);
         match address {
             Ref::Label(_) => {
-                let placeholder = self.writer.put_i8(0);
                 self.mark_relative_patch_location(address.clone(), placeholder as u16);
             },
             Ref::Address(address) => {
-                self.patch_relative(*address, self.writer.cursor() as u16);
+                self.patch_relative(*address, placeholder as u16);
             }
         }
     }
@@ -273,7 +273,7 @@ impl Assembler {
     }
 
     fn patch_relative(&mut self, label_location: u16, address: u16) {
-        let offset = label_location as i64 - address as i64;
+        let offset = label_location as i64 - address as i64 - 1;
 
         if offset < -128 || offset > 127 {
             panic!("Relative offset too far: {}", offset);
@@ -648,7 +648,7 @@ mod tests {
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _REL>] as u8 };
-                        expected[1] = -1i8 as u8;
+                        expected[1] = -2i8 as u8;
 
                         assert_eq!(subject.assemble(), expected.as_slice()); 
                     }

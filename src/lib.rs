@@ -58,6 +58,8 @@ mod tests {
 
             asm.lda_immediate(1);
             asm.sta_absolute(&Ref::Address(0xFF02));
+            asm.lda_immediate(7);
+            asm.sta_absolute(&Ref::Address(0xFEE8));
 
             asm.lda_immediate(65);
             asm.ldx_immediate(255);
