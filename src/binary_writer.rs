@@ -56,6 +56,15 @@ impl BinaryWriter {
         }
     }
 
+    pub fn set_i8(&mut self, index: usize, value: i8) -> Result<(), String> {
+        if index >= self.data.len() {
+            Err(format!("Index out of bounds: {}", index))
+        } else {
+            self.data[index] = value as u8;
+            Ok(())
+        }
+    }
+
     pub fn set_u16(&mut self, index: usize, value: u16) -> Result<(), String> {
         if index + 1 >= self.data.len() {
             Err(format!("Index out of bounds: {}", index))
@@ -154,6 +163,17 @@ mod tests {
         assert_eq!(subject.set_u8(0, 24), Ok(()));
 
         assert_eq!(subject.data[0], 24);
+    }
+
+    #[test]
+    fn set_i8_works() {
+        let mut subject = BinaryWriter::new(100);
+
+        assert_eq!(subject.put_i8(42), 0);
+
+        assert_eq!(subject.set_i8(0, -24), Ok(()));
+
+        assert_eq!(subject.data[0], -24i8 as u8);
     }
 
     #[test]

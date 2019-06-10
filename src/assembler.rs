@@ -29,7 +29,12 @@ macro_rules! generate_relative_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _relative>](&mut self, offset: i8) {
+                pub fn [<$name _relative>](&mut self, address: &Ref) {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _REL>] });
+                    self.put_relative_address(address);
+                }
+
+                pub fn [<$name _relative_immediate>](&mut self, offset: i8) {
                     self.put_opcode(paste::expr! { OpCode::[<$op _REL>] });
                     self.writer.put_i8(offset);
                 }
@@ -214,6 +219,7 @@ pub struct Assembler {
     writer: BinaryWriter,
     next_label: u16,
     patch_locations: HashMap<Ref, Vec<u16>>,
+    relative_patch_locations: HashMap<Ref, Vec<u16>>,
     label_locations: HashMap<Ref, u16>
 }
 
@@ -223,11 +229,12 @@ impl Assembler {
             writer: BinaryWriter::new(0x10000),
             next_label: 0,
             patch_locations: HashMap::new(),
+            relative_patch_locations: HashMap::new(),
             label_locations: HashMap::new()
         }
     }
 
-    fn put_address(&mut self, address :&Ref) {
+    fn put_address(&mut self, address:&Ref) {
         match address {
             Ref::Label(_) => {
                 let placeholder = self.writer.put_u16(0);
@@ -239,6 +246,18 @@ impl Assembler {
         }
     }
 
+    fn put_relative_address(&mut self, address: &Ref) {
+        match address {
+            Ref::Label(_) => {
+                let placeholder = self.writer.put_i8(0);
+                self.mark_relative_patch_location(address.clone(), placeholder as u16);
+            },
+            Ref::Address(address) => {
+                self.patch_relative(*address, self.writer.cursor() as u16);
+            }
+        }
+    }
+
     fn mark_patch_location(&mut self, label: Ref, address: u16) {
         match self.patch_locations.get_mut(&label) {
             Some(locations) => { locations.push(address); },
@@ -246,16 +265,60 @@ impl Assembler {
         }
     }
     
+    fn mark_relative_patch_location(&mut self, label: Ref, address: u16) {
+        match self.relative_patch_locations.get_mut(&label) {
+            Some(locations) => { locations.push(address); },
+            None => { self.relative_patch_locations.insert(label, vec![address]); }
+        }
+    }
+
+    fn patch_relative(&mut self, label_location: u16, address: u16) {
+        let offset = label_location as i64 - address as i64;
+
+        if offset < -128 || offset > 127 {
+            panic!("Relative offset too far: {}", offset);
+        }
+
+        self.writer.set_i8(address as usize, offset as i8).unwrap();
+    }
+
     fn put_opcode(&mut self, opcode: OpCode) {
         self.writer.put_u8(opcode as u8);
     }
 
-    pub fn assemble(&mut self) -> &[u8] {
-        for (k, v) in &self.label_locations {
-            for address in self.patch_locations.get(&k).expect(&format!("Unmarked patch: {:?}", k)) {
-                self.writer.set_u16(*address as usize, *v).unwrap();
+    fn fixup_patches(&mut self) {
+        for (label, locations) in &self.patch_locations {
+            if let Some(address) = self.label_locations.get(label) {
+                for location in locations {
+                    self.writer.set_u16(*location as usize, *address).unwrap();
+                }
+            } else {
+                panic!("Unmarked label: {:?}", label);
             }
         }
+    }
+
+    fn fixup_relative_patches(&mut self) {
+        let mut relative_patches = Vec::new();
+
+        for (label, locations) in &self.relative_patch_locations {
+            if let Some(address) = self.label_locations.get(label) {
+                for location in locations {
+                    relative_patches.push((*address, *location));
+                }
+            } else {
+                panic!("Unmarked label: {:?}", label);
+            }
+        }
+
+        for (address, location) in relative_patches {
+            self.patch_relative(address, location);
+        }
+    }
+
+    pub fn assemble(&mut self) -> &[u8] {
+        self.fixup_patches();
+        self.fixup_relative_patches();
         self.writer.as_bytes()
     }
 
@@ -277,6 +340,10 @@ impl Assembler {
         let result = self.label();
         self.label_locations.insert(result.clone(), address).unwrap();
         result
+    }
+
+    pub fn resolve(&self, label: &Ref) -> Option<u16> {
+        self.label_locations.get(label).map(|x| *x)
     }
 
     pub fn mark(&mut self, label: &Ref) {
@@ -574,7 +641,25 @@ mod tests {
                     fn [<$name _relative_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _relative>](-2); }
+                        let l = subject.label();
+                        subject.mark(&l);
+                        
+                        paste::expr! { subject.[<$name _relative>](&l); }
+
+                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        expected[0] = paste::expr! { OpCode::[<$op _REL>] as u8 };
+                        expected[1] = -1i8 as u8;
+
+                        assert_eq!(subject.assemble(), expected.as_slice()); 
+                    }
+                }
+
+                paste::item! {
+                    #[test]
+                    fn [<$name _relative_immediate_works>]() {
+                        let mut subject = Assembler::new();
+
+                        paste::expr! { subject.[<$name _relative_immediate>](-2); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _REL>] as u8 };
