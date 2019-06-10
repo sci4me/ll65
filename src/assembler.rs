@@ -2,6 +2,7 @@ use crate::binary_writer::BinaryWriter;
 use crate::opcodes::OpCode;
 use paste;
 use std::collections::HashMap;
+use std::fmt;
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 pub enum Ref {
@@ -12,6 +13,15 @@ pub enum Ref {
 impl Into<Ref> for u16 {
     fn into(self) -> Ref {
         Ref::Address(self)
+    }
+}
+
+impl fmt::Display for Ref {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Ref::Label(n) => write!(f, "L{}", n),
+            Ref::Address(n) => write!(f, "0x{:04X}", n),
+        }
     }
 }
 
@@ -361,7 +371,7 @@ impl Assembler {
     pub fn resolve(&self, label: Ref) -> Option<u16> {
         match label {
             Ref::Label(_) => self.label_locations.get(&label).map(|x| *x),
-            Ref::Address(x) => Some(x)
+            Ref::Address(x) => Some(x),
         }
     }
 
@@ -605,6 +615,19 @@ impl Assembler {
 mod tests {
     use super::*;
     use crate::utils::zero_vec_of_len;
+
+    #[test]
+    fn u16_into_ref_works() {
+        let result: Ref = 1234.into();
+
+        assert_eq!(result, Ref::Address(1234));
+    }
+
+    #[test]
+    fn ref_display_works() {
+        assert_eq!(&format!("{}", Ref::Label(42)), "L42");
+        assert_eq!(&format!("{}", Ref::Address(0x1234)), "0x1234");
+    }
 
     macro_rules! generate_instruction_tests {
         ( $(($name:ident, $op:ident)),* ) => {
@@ -1170,11 +1193,6 @@ mod tests {
     );
 
     generate_bbr_style_instruction_tests!((bbr, BBR), (bbs, BBS), (rmb, RMB), (smb, SMB));
-
-    #[test]
-    fn u16_into_ref_works() {
-        assert_eq!(Ref::Address(1234), 1234.into());
-    }
 
     #[test]
     fn labels_work() {
