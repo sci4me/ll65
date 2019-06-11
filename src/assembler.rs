@@ -236,6 +236,12 @@ pub struct Assembler {
     label_locations: HashMap<Ref, u16>,
 }
 
+impl Default for Assembler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Assembler {
     pub fn new() -> Self {
         Self {
@@ -251,7 +257,7 @@ impl Assembler {
         match address {
             Ref::Label(_) => {
                 let placeholder = self.writer.put_u16(0)?;
-                self.mark_patch_location(address.clone(), placeholder as u16);
+                self.mark_patch_location(address, placeholder as u16);
             }
             Ref::Address(address) => {
                 self.writer.put_u16(address).map(|_| ())?;
@@ -264,7 +270,7 @@ impl Assembler {
         let placeholder = self.writer.put_i8(0)?;
         match address {
             Ref::Label(_) => {
-                self.mark_relative_patch_location(address.clone(), placeholder as u16);
+                self.mark_relative_patch_location(address, placeholder as u16);
             }
             Ref::Address(address) => {
                 self.patch_relative(address, placeholder as u16);
@@ -296,7 +302,7 @@ impl Assembler {
     }
 
     fn patch_relative(&mut self, label_location: u16, address: u16) {
-        let offset = label_location as i64 - address as i64 - 1;
+        let offset = i64::from(label_location) - i64::from(address) - 1;
         self.writer
             .set_i8(address as usize, offset as i8)
             .expect("Internal Error: Unable to set i8");
@@ -365,10 +371,6 @@ impl Assembler {
         Ok(self.writer.as_bytes())
     }
 
-    pub fn len(&self) -> usize {
-        self.writer.len()
-    }
-
     pub fn cursor(&self) -> u16 {
         self.writer.cursor() as u16
     }
@@ -382,14 +384,14 @@ impl Assembler {
     pub fn label_at(&mut self, address: u16) -> Ref {
         let result = self.label();
         self.label_locations
-            .insert(result.clone(), address)
+            .insert(result, address)
             .expect("Internal Error: Unable to insert into label_locations");
         result
     }
 
     pub fn resolve(&self, label: Ref) -> Option<u16> {
         match label {
-            Ref::Label(_) => self.label_locations.get(&label).map(|x| *x),
+            Ref::Label(_) => self.label_locations.get(&label).cloned(),
             Ref::Address(x) => Some(x),
         }
     }
@@ -398,7 +400,7 @@ impl Assembler {
         if self.label_locations.contains_key(&label) {
             Err(format!("Label {} alread marked!", label))
         } else {
-            self.label_locations.insert(label.clone(), self.cursor());
+            self.label_locations.insert(label, self.cursor());
             Ok(())
         }
     }
@@ -659,7 +661,7 @@ mod tests {
 
                         subject.$name().unwrap();
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = OpCode::$op as u8;
 
                         assert_eq!(subject.assemble(), Ok(expected.as_slice()));
@@ -679,7 +681,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _accumulator>]().unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _ACC>] as u8 };
 
                         assert_eq!(subject.assemble(), Ok(expected.as_slice()));
@@ -702,7 +704,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _relative>](l).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _REL>] as u8 };
                         expected[1] = -2i8 as u8;
 
@@ -717,7 +719,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _relative_immediate>](-2).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _REL>] as u8 };
                         expected[1] = -2i8 as u8;
 
@@ -738,7 +740,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _absolute>](256).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _AB>] as u8 };
                         expected[1] = 0;
                         expected[2] = 1;
@@ -760,7 +762,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _indirect>](256).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _IN>] as u8 };
                         expected[1] = 0;
                         expected[2] = 1;
@@ -782,7 +784,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _absolute_x>](256).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _ABX>] as u8 };
                         expected[1] = 0;
                         expected[2] = 1;
@@ -804,7 +806,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _absolute_y>](256).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _ABY>] as u8 };
                         expected[1] = 0;
                         expected[2] = 1;
@@ -826,7 +828,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _immediate>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _IMM>] as u8 };
                         expected[1] = 42;
 
@@ -847,7 +849,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _indirect_x>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _INX>] as u8 };
                         expected[1] = 42;
 
@@ -868,7 +870,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _indirect_y>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _INY>] as u8 };
                         expected[1] = 42;
 
@@ -889,7 +891,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _zp>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _ZP>] as u8 };
                         expected[1] = 42;
 
@@ -910,7 +912,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _zpx>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _ZPX>] as u8 };
                         expected[1] = 42;
 
@@ -931,7 +933,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _zpy>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _ZPY>] as u8 };
                         expected[1] = 42;
 
@@ -952,7 +954,7 @@ mod tests {
 
                         paste::expr! { subject.[<$name _indirect_zp>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op _INZP>] as u8 };
                         expected[1] = 42;
 
@@ -980,7 +982,7 @@ mod tests {
                         subject.$name(6).unwrap();
                         subject.$name(7).unwrap();
 
-                        let mut expected = zero_vec_of_len(subject.len() as usize);
+                        let mut expected = zero_vec_of_len(0x10000);
                         expected[0] = paste::expr! { OpCode::[<$op 0>] as u8 };
                         expected[1] = paste::expr! { OpCode::[<$op 1>] as u8 };
                         expected[2] = paste::expr! { OpCode::[<$op 2>] as u8 };
@@ -1234,7 +1236,7 @@ mod tests {
 
         subject.mark(label).unwrap();
 
-        let mut expected = zero_vec_of_len(subject.len());
+        let mut expected = zero_vec_of_len(0x10000);
         expected[0] = OpCode::SEI as u8;
         expected[1] = OpCode::JMP_AB as u8;
         expected[2] = 5;

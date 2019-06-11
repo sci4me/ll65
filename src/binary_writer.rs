@@ -23,7 +23,7 @@ impl BinaryWriter {
         }
     }
 
-    pub fn len(&self) -> usize {
+    pub fn capacity(&self) -> usize {
         self.data.len()
     }
 
@@ -91,11 +91,11 @@ mod tests {
 
         subject.put_u8(42).unwrap();
 
-        assert_eq!(subject.len(), 100);
+        assert_eq!(subject.capacity(), 100);
 
         subject.put_u16(256).unwrap();
 
-        assert_eq!(subject.len(), 100);
+        assert_eq!(subject.capacity(), 100);
     }
 
     #[test]
