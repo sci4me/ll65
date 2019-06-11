@@ -51,9 +51,9 @@ macro_rules! generate_relative_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _relative>]<T: Into<Ref>>(&mut self, address: T) {
+                pub fn [<$name _relative>]<T: Into<Ref>>(&mut self, address: T) -> Result<(), String> {
                     self.put_opcode(paste::expr! { OpCode::[<$op _REL>] });
-                    self.put_relative_address(address.into());
+                    self.put_relative_address(address.into())
                 }
 
                 pub fn [<$name _relative_immediate>](&mut self, offset: i8) {
@@ -211,20 +211,22 @@ macro_rules! generate_indirect_zp_instructions {
 macro_rules! generate_bbr_style_instruction {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
-            pub fn $name(&mut self, bit: u8) {
+            pub fn $name(&mut self, bit: u8) -> Result<(), String> {
                 if bit > 7 {
-                    panic!("Expected bit value 0-7, got {}", bit);
-                }
-                match bit {
-                    0 => self.put_opcode(paste::expr! { OpCode::[<$op 0>] }),
-                    1 => self.put_opcode(paste::expr! { OpCode::[<$op 1>] }),
-                    2 => self.put_opcode(paste::expr! { OpCode::[<$op 2>] }),
-                    3 => self.put_opcode(paste::expr! { OpCode::[<$op 3>] }),
-                    4 => self.put_opcode(paste::expr! { OpCode::[<$op 4>] }),
-                    5 => self.put_opcode(paste::expr! { OpCode::[<$op 5>] }),
-                    6 => self.put_opcode(paste::expr! { OpCode::[<$op 6>] }),
-                    7 => self.put_opcode(paste::expr! { OpCode::[<$op 7>] }),
-                    _ => unreachable!()
+                    Err(format!("Expected bit value 0-7, got {}", bit))
+                } else {
+                    match bit {
+                        0 => self.put_opcode(paste::expr! { OpCode::[<$op 0>] }),
+                        1 => self.put_opcode(paste::expr! { OpCode::[<$op 1>] }),
+                        2 => self.put_opcode(paste::expr! { OpCode::[<$op 2>] }),
+                        3 => self.put_opcode(paste::expr! { OpCode::[<$op 3>] }),
+                        4 => self.put_opcode(paste::expr! { OpCode::[<$op 4>] }),
+                        5 => self.put_opcode(paste::expr! { OpCode::[<$op 5>] }),
+                        6 => self.put_opcode(paste::expr! { OpCode::[<$op 6>] }),
+                        7 => self.put_opcode(paste::expr! { OpCode::[<$op 7>] }),
+                        _ => unreachable!()
+                    }
+                    Ok(())
                 }
             }
         )*
@@ -262,16 +264,17 @@ impl Assembler {
         }
     }
 
-    fn put_relative_address(&mut self, address: Ref) {
+    fn put_relative_address(&mut self, address: Ref) -> Result<(), String> {
         let placeholder = self.writer.put_i8(0);
         match address {
             Ref::Label(_) => {
                 self.mark_relative_patch_location(address.clone(), placeholder as u16);
             }
             Ref::Address(address) => {
-                self.patch_relative(address, placeholder as u16);
+                self.patch_relative(address, placeholder as u16)?;
             }
         }
+        Ok(())
     }
 
     fn mark_patch_location(&mut self, label: Ref, address: u16) {
@@ -296,33 +299,35 @@ impl Assembler {
         }
     }
 
-    fn patch_relative(&mut self, label_location: u16, address: u16) {
+    fn patch_relative(&mut self, label_location: u16, address: u16) -> Result<(), String> {
         let offset = label_location as i64 - address as i64 - 1;
 
         if offset < -128 || offset > 127 {
-            panic!("Relative offset too far: {}", offset);
+            Err(format!("Relative offset too far: {}", offset))
+        } else {
+            self.writer.set_i8(address as usize, offset as i8).unwrap();
+            Ok(())
         }
-
-        self.writer.set_i8(address as usize, offset as i8).unwrap();
     }
 
     fn put_opcode(&mut self, opcode: OpCode) {
         self.writer.put_u8(opcode as u8);
     }
 
-    fn fixup_patches(&mut self) {
+    fn fixup_patches(&mut self) -> Result<(), String> {
         for (label, locations) in &self.patch_locations {
             if let Some(address) = self.label_locations.get(label) {
                 for location in locations {
                     self.writer.set_u16(*location as usize, *address).unwrap();
                 }
             } else {
-                panic!("Unmarked label: {}", label);
+                return Err(format!("Unmarked label: {}", label));
             }
         }
+        Ok(())
     }
 
-    fn fixup_relative_patches(&mut self) {
+    fn fixup_relative_patches(&mut self) -> Result<(), String> {
         let mut relative_patches = Vec::new();
 
         for (label, locations) in &self.relative_patch_locations {
@@ -331,19 +336,21 @@ impl Assembler {
                     relative_patches.push((*address, *location));
                 }
             } else {
-                panic!("Unmarked label: {}", label);
+                return Err(format!("Unmarked label: {}", label));
             }
         }
 
         for (address, location) in relative_patches {
-            self.patch_relative(address, location);
+            self.patch_relative(address, location)?;
         }
+
+        Ok(())
     }
 
-    pub fn assemble(&mut self) -> &[u8] {
-        self.fixup_patches();
-        self.fixup_relative_patches();
-        self.writer.as_bytes()
+    pub fn assemble(&mut self) -> Result<&[u8], String> {
+        self.fixup_patches()?;
+        self.fixup_relative_patches()?;
+        Ok(self.writer.as_bytes())
     }
 
     pub fn len(&self) -> usize {
@@ -375,12 +382,13 @@ impl Assembler {
         }
     }
 
-    pub fn mark(&mut self, label: Ref) {
+    pub fn mark(&mut self, label: Ref) -> Result<(), String> {
         if self.label_locations.contains_key(&label) {
-            panic!("Label {} alread marked!", label);
+            Err(format!("Label {} alread marked!", label))
+        } else {
+            self.label_locations.insert(label.clone(), self.cursor());
+            Ok(())
         }
-
-        self.label_locations.insert(label.clone(), self.cursor());
     }
 
     pub fn set_u8(&mut self, address: u16, value: u8) -> Result<(), String> {
@@ -642,7 +650,7 @@ mod tests {
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = OpCode::$op as u8;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -662,7 +670,7 @@ mod tests {
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ACC>] as u8 };
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -678,15 +686,15 @@ mod tests {
                         let mut subject = Assembler::new();
 
                         let l = subject.label();
-                        subject.mark(l);
+                        subject.mark(l).unwrap();
 
-                        paste::expr! { subject.[<$name _relative>](l); }
+                        paste::expr! { subject.[<$name _relative>](l).unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _REL>] as u8 };
                         expected[1] = -2i8 as u8;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
 
@@ -701,7 +709,7 @@ mod tests {
                         expected[0] = paste::expr! { OpCode::[<$op _REL>] as u8 };
                         expected[1] = -2i8 as u8;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -723,7 +731,7 @@ mod tests {
                         expected[1] = 0;
                         expected[2] = 1;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -745,7 +753,7 @@ mod tests {
                         expected[1] = 0;
                         expected[2] = 1;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -767,7 +775,7 @@ mod tests {
                         expected[1] = 0;
                         expected[2] = 1;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -789,7 +797,7 @@ mod tests {
                         expected[1] = 0;
                         expected[2] = 1;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -810,7 +818,7 @@ mod tests {
                         expected[0] = paste::expr! { OpCode::[<$op _IMM>] as u8 };
                         expected[1] = 42;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -831,7 +839,7 @@ mod tests {
                         expected[0] = paste::expr! { OpCode::[<$op _INX>] as u8 };
                         expected[1] = 42;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -852,7 +860,7 @@ mod tests {
                         expected[0] = paste::expr! { OpCode::[<$op _INY>] as u8 };
                         expected[1] = 42;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -873,7 +881,7 @@ mod tests {
                         expected[0] = paste::expr! { OpCode::[<$op _ZP>] as u8 };
                         expected[1] = 42;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -894,7 +902,7 @@ mod tests {
                         expected[0] = paste::expr! { OpCode::[<$op _ZPX>] as u8 };
                         expected[1] = 42;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -915,7 +923,7 @@ mod tests {
                         expected[0] = paste::expr! { OpCode::[<$op _ZPY>] as u8 };
                         expected[1] = 42;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -936,7 +944,7 @@ mod tests {
                         expected[0] = paste::expr! { OpCode::[<$op _INZP>] as u8 };
                         expected[1] = 42;
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
                     }
                 }
             )*
@@ -951,14 +959,14 @@ mod tests {
                     fn [<$name _works>]() {
                         let mut subject = Assembler::new();
 
-                        subject.$name(0);
-                        subject.$name(1);
-                        subject.$name(2);
-                        subject.$name(3);
-                        subject.$name(4);
-                        subject.$name(5);
-                        subject.$name(6);
-                        subject.$name(7);
+                        subject.$name(0).unwrap();
+                        subject.$name(1).unwrap();
+                        subject.$name(2).unwrap();
+                        subject.$name(3).unwrap();
+                        subject.$name(4).unwrap();
+                        subject.$name(5).unwrap();
+                        subject.$name(6).unwrap();
+                        subject.$name(7).unwrap();
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op 0>] as u8 };
@@ -970,7 +978,15 @@ mod tests {
                         expected[6] = paste::expr! { OpCode::[<$op 6>] as u8 };
                         expected[7] = paste::expr! { OpCode::[<$op 7>] as u8 };
 
-                        assert_eq!(subject.assemble(), expected.as_slice());
+                        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
+                    }
+
+                    #[test]
+                    #[should_panic(expected = "Expected bit value 0-7, got 8")]
+                    fn [<$name _panics_if_parameter_is_out_of_bounds>]() {
+                        let mut subject = Assembler::new();
+
+                        subject.$name(8).unwrap();
                     }
                 }
             )*
@@ -1205,7 +1221,7 @@ mod tests {
 
         subject.cli();
 
-        subject.mark(label);
+        subject.mark(label).unwrap();
 
         let mut expected = zero_vec_of_len(subject.len());
         expected[0] = OpCode::SEI as u8;
@@ -1214,6 +1230,6 @@ mod tests {
         expected[3] = 0;
         expected[4] = OpCode::CLI as u8;
 
-        assert_eq!(subject.assemble(), expected.as_slice());
+        assert_eq!(subject.assemble(), Ok(expected.as_slice()));
     }
 }

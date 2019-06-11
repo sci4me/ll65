@@ -27,24 +27,24 @@ mod tests {
         asm.jmp_absolute(main);
 
         {
-            asm.mark(nmi);
+            asm.mark(nmi).unwrap();
             asm.rts();
         }
 
         {
-            asm.mark(irq);
+            asm.mark(irq).unwrap();
             asm.rts();
         }
 
         {
-            asm.mark(main);
+            asm.mark(main).unwrap();
             asm.sei();
 
             asm.lda_immediate(3);
             asm.sta_absolute(0xFF02);
 
             let l = asm.label();
-            asm.mark(l);
+            asm.mark(l).unwrap();
             asm.lda_absolute(0xFEE8);
             asm.inc_accumulator();
             asm.and_immediate(7);
@@ -80,7 +80,7 @@ mod tests {
         asm.set_u16(RESET_VECTOR, reset).unwrap();
 
         let mut file = File::create("out.bin").unwrap();
-        file.write(asm.assemble()).unwrap();
+        file.write(asm.assemble().unwrap()).unwrap();
         file.flush().unwrap();
     }
 }
