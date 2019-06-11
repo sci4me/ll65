@@ -271,7 +271,7 @@ impl Assembler {
                 self.mark_relative_patch_location(address.clone(), placeholder as u16);
             }
             Ref::Address(address) => {
-                self.patch_relative(address, placeholder as u16)?;
+                self.patch_relative(address, placeholder as u16);
             }
         }
         Ok(())
@@ -299,57 +299,61 @@ impl Assembler {
         }
     }
 
-    fn patch_relative(&mut self, label_location: u16, address: u16) -> Result<(), String> {
+    fn patch_relative(&mut self, label_location: u16, address: u16) {
         let offset = label_location as i64 - address as i64 - 1;
-
-        if offset < -128 || offset > 127 {
-            Err(format!("Relative offset too far: {}", offset))
-        } else {
-            self.writer.set_i8(address as usize, offset as i8).unwrap();
-            Ok(())
-        }
+        self.writer.set_i8(address as usize, offset as i8).expect("Internal Error: Unable to set i8");
     }
 
     fn put_opcode(&mut self, opcode: OpCode) {
         self.writer.put_u8(opcode as u8);
     }
 
-    fn fixup_patches(&mut self) -> Result<(), String> {
+    fn fixup_patches(&mut self) {
         for (label, locations) in &self.patch_locations {
-            if let Some(address) = self.label_locations.get(label) {
-                for location in locations {
-                    self.writer.set_u16(*location as usize, *address).unwrap();
-                }
-            } else {
-                return Err(format!("Unmarked label: {}", label));
+            let address = self.label_locations.get(label).expect("Internal Error: Unable to retrieve label location");
+            for location in locations {
+                self.writer.set_u16(*location as usize, *address).expect("Internal Error: Unable to set u16");
             }
         }
-        Ok(())
     }
 
-    fn fixup_relative_patches(&mut self) -> Result<(), String> {
+    fn fixup_relative_patches(&mut self) {
         let mut relative_patches = Vec::new();
 
         for (label, locations) in &self.relative_patch_locations {
-            if let Some(address) = self.label_locations.get(label) {
-                for location in locations {
-                    relative_patches.push((*address, *location));
-                }
-            } else {
-                return Err(format!("Unmarked label: {}", label));
+            let address = self.label_locations.get(label).expect("Internal Error: Unable to retrieve label location");
+            for location in locations {
+                relative_patches.push((*address, *location));
             }
         }
 
         for (address, location) in relative_patches {
-            self.patch_relative(address, location)?;
+            self.patch_relative(address, location);
         }
-
-        Ok(())
     }
 
     pub fn assemble(&mut self) -> Result<&[u8], String> {
-        self.fixup_patches()?;
-        self.fixup_relative_patches()?;
+        if self.next_label as usize != self.label_locations.len() {
+            let labels: Vec<u16> = self.patch_locations.keys()
+                .chain(self.relative_patch_locations.keys())
+                .filter_map(|r| match r {
+                    Ref::Label(x) => Some(*x),
+                    _ => None
+                })
+                .collect();
+
+            for index in labels {
+                let label = Ref::Label(index);
+                
+                if !self.label_locations.contains_key(&label) {
+                    return Err(format!("Unmarked label: {}", label));
+                }
+            }
+        }
+
+        self.fixup_patches();
+        self.fixup_relative_patches();
+
         Ok(self.writer.as_bytes())
     }
 
@@ -371,7 +375,7 @@ impl Assembler {
         let result = self.label();
         self.label_locations
             .insert(result.clone(), address)
-            .unwrap();
+            .expect("Internal Error: Unable to insert into label_locations");
         result
     }
 
@@ -982,11 +986,10 @@ mod tests {
                     }
 
                     #[test]
-                    #[should_panic(expected = "Expected bit value 0-7, got 8")]
                     fn [<$name _panics_if_parameter_is_out_of_bounds>]() {
                         let mut subject = Assembler::new();
 
-                        subject.$name(8).unwrap();
+                        assert_eq!(subject.$name(8), Err(String::from("Expected bit value 0-7, got 8")))
                     }
                 }
             )*
@@ -1231,5 +1234,24 @@ mod tests {
         expected[4] = OpCode::CLI as u8;
 
         assert_eq!(subject.assemble(), Ok(expected.as_slice()));
+    }
+
+    #[test]
+    fn unused_labels_are_allowed() {
+        let mut subject = Assembler::new();
+
+        subject.label();
+
+        assert_eq!(subject.assemble(), Ok(zero_vec_of_len(0x10000).as_slice()));
+    }
+
+    #[test]
+    fn labels_complain_when_unmarked() {
+        let mut subject = Assembler::new();
+
+        let l = subject.label();
+        subject.jmp_absolute(l);
+
+        assert_eq!(subject.assemble(), Err(String::from("Unmarked label: L0")));
     }
 }
