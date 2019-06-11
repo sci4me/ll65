@@ -28,8 +28,8 @@ impl fmt::Display for Ref {
 macro_rules! generate_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
-            pub fn $name(&mut self) {
-                self.put_opcode(OpCode::$op);
+            pub fn $name(&mut self) -> Result<(), String> {
+                self.put_opcode(OpCode::$op)
             }
         )*
     }
@@ -39,8 +39,8 @@ macro_rules! generate_accumulator_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _accumulator>](&mut self) {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _ACC>] });
+                pub fn [<$name _accumulator>](&mut self) -> Result<(), String> {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _ACC>] })
                 }
             }
         )*
@@ -52,13 +52,13 @@ macro_rules! generate_relative_instructions {
         $(
             paste::item! {
                 pub fn [<$name _relative>]<T: Into<Ref>>(&mut self, address: T) -> Result<(), String> {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _REL>] });
+                    self.put_opcode(paste::expr! { OpCode::[<$op _REL>] })?;
                     self.put_relative_address(address.into())
                 }
 
-                pub fn [<$name _relative_immediate>](&mut self, offset: i8) {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _REL>] });
-                    self.writer.put_i8(offset);
+                pub fn [<$name _relative_immediate>](&mut self, offset: i8) -> Result<(), String> {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _REL>] })?;
+                    self.writer.put_i8(offset).map(|_| ())
                 }
             }
         )*
@@ -69,9 +69,9 @@ macro_rules! generate_absolute_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _absolute>]<T: Into<Ref>>(&mut self, address: T) {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _AB>] });
-                    self.put_address(address.into());
+                pub fn [<$name _absolute>]<T: Into<Ref>>(&mut self, address: T) -> Result<(), String> {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _AB>] })?;
+                    self.put_address(address.into()).map(|_| ())
                 }
             }
         )*
@@ -82,9 +82,9 @@ macro_rules! generate_indirect_instructions {
     ( $(($name:ident,$op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _indirect>]<T: Into<Ref>>(&mut self, address: T) {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _IN>] });
-                    self.put_address(address.into());
+                pub fn [<$name _indirect>]<T: Into<Ref>>(&mut self, address: T) -> Result<(), String> {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _IN>] })?;
+                    self.put_address(address.into()).map(|_| ())
                 }
             }
         )*
@@ -95,9 +95,9 @@ macro_rules! generate_absolute_x_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _absolute_x>]<T: Into<Ref>>(&mut self, address: T) {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _ABX>] });
-                    self.put_address(address.into());
+                pub fn [<$name _absolute_x>]<T: Into<Ref>>(&mut self, address: T) -> Result<(), String> {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _ABX>] })?;
+                    self.put_address(address.into()).map(|_| ())
                 }
             }
         )*
@@ -108,9 +108,9 @@ macro_rules! generate_absolute_y_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _absolute_y>]<T: Into<Ref>>(&mut self, address: T) {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _ABY>] });
-                    self.put_address(address.into());
+                pub fn [<$name _absolute_y>]<T: Into<Ref>>(&mut self, address: T) -> Result<(), String> {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _ABY>] })?;
+                    self.put_address(address.into()).map(|_| ())
                 }
             }
         )*
@@ -121,9 +121,9 @@ macro_rules! generate_immediate_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _immediate>](&mut self, value: u8) {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _IMM>] });
-                    self.writer.put_u8(value);
+                pub fn [<$name _immediate>](&mut self, value: u8) -> Result<(), String> {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _IMM>] })?;
+                    self.writer.put_u8(value).map(|_| ())
                 }
             }
         )*
@@ -134,9 +134,9 @@ macro_rules! generate_indirect_x_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _indirect_x>](&mut self, value: u8) {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _INX>] });
-                    self.writer.put_u8(value);
+                pub fn [<$name _indirect_x>](&mut self, value: u8) -> Result<(), String> {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _INX>] })?;
+                    self.writer.put_u8(value).map(|_| ())
                 }
             }
         )*
@@ -147,9 +147,9 @@ macro_rules! generate_indirect_y_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _indirect_y>](&mut self, value: u8) {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _INY>] });
-                    self.writer.put_u8(value);
+                pub fn [<$name _indirect_y>](&mut self, value: u8) -> Result<(), String> {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _INY>] })?;
+                    self.writer.put_u8(value).map(|_| ())
                 }
             }
         )*
@@ -160,9 +160,9 @@ macro_rules! generate_zp_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _zp>](&mut self, address: u8) {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _ZP>] });
-                    self.writer.put_u8(address);
+                pub fn [<$name _zp>](&mut self, address: u8) -> Result<(), String> {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _ZP>] })?;
+                    self.writer.put_u8(address).map(|_| ())
                 }
             }
         )*
@@ -173,9 +173,9 @@ macro_rules! generate_zpx_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _zpx>](&mut self, address: u8) {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _ZPX>] });
-                    self.writer.put_u8(address);
+                pub fn [<$name _zpx>](&mut self, address: u8) -> Result<(), String> {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _ZPX>] })?;
+                    self.writer.put_u8(address).map(|_| ())
                 }
             }
         )*
@@ -186,9 +186,9 @@ macro_rules! generate_zpy_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _zpy>](&mut self, address: u8) {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _ZPY>] });
-                    self.writer.put_u8(address);
+                pub fn [<$name _zpy>](&mut self, address: u8) -> Result<(), String> {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _ZPY>] })?;
+                    self.writer.put_u8(address).map(|_| ())
                 }
             }
         )*
@@ -199,9 +199,9 @@ macro_rules! generate_indirect_zp_instructions {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             paste::item! {
-                pub fn [<$name _indirect_zp>](&mut self, address: u8) {
-                    self.put_opcode(paste::expr! { OpCode::[<$op _INZP>] });
-                    self.writer.put_u8(address);
+                pub fn [<$name _indirect_zp>](&mut self, address: u8) -> Result<(), String> {
+                    self.put_opcode(paste::expr! { OpCode::[<$op _INZP>] })?;
+                    self.writer.put_u8(address).map(|_| ())
                 }
             }
         )*
@@ -212,21 +212,16 @@ macro_rules! generate_bbr_style_instruction {
     ( $(($name:ident, $op:ident)),* ) => {
         $(
             pub fn $name(&mut self, bit: u8) -> Result<(), String> {
-                if bit > 7 {
-                    Err(format!("Expected bit value 0-7, got {}", bit))
-                } else {
-                    match bit {
-                        0 => self.put_opcode(paste::expr! { OpCode::[<$op 0>] }),
-                        1 => self.put_opcode(paste::expr! { OpCode::[<$op 1>] }),
-                        2 => self.put_opcode(paste::expr! { OpCode::[<$op 2>] }),
-                        3 => self.put_opcode(paste::expr! { OpCode::[<$op 3>] }),
-                        4 => self.put_opcode(paste::expr! { OpCode::[<$op 4>] }),
-                        5 => self.put_opcode(paste::expr! { OpCode::[<$op 5>] }),
-                        6 => self.put_opcode(paste::expr! { OpCode::[<$op 6>] }),
-                        7 => self.put_opcode(paste::expr! { OpCode::[<$op 7>] }),
-                        _ => unreachable!()
-                    }
-                    Ok(())
+                match bit {
+                    0 => self.put_opcode(paste::expr! { OpCode::[<$op 0>] }),
+                    1 => self.put_opcode(paste::expr! { OpCode::[<$op 1>] }),
+                    2 => self.put_opcode(paste::expr! { OpCode::[<$op 2>] }),
+                    3 => self.put_opcode(paste::expr! { OpCode::[<$op 3>] }),
+                    4 => self.put_opcode(paste::expr! { OpCode::[<$op 4>] }),
+                    5 => self.put_opcode(paste::expr! { OpCode::[<$op 5>] }),
+                    6 => self.put_opcode(paste::expr! { OpCode::[<$op 6>] }),
+                    7 => self.put_opcode(paste::expr! { OpCode::[<$op 7>] }),
+                    _ => Err(format!("Expected bit value 0-7, got {}", bit))
                 }
             }
         )*
@@ -252,20 +247,21 @@ impl Assembler {
         }
     }
 
-    fn put_address(&mut self, address: Ref) {
+    fn put_address(&mut self, address: Ref) -> Result<(), String> {
         match address {
             Ref::Label(_) => {
-                let placeholder = self.writer.put_u16(0);
+                let placeholder = self.writer.put_u16(0)?;
                 self.mark_patch_location(address.clone(), placeholder as u16);
             }
             Ref::Address(address) => {
-                self.writer.put_u16(address);
+                self.writer.put_u16(address).map(|_| ())?;
             }
         }
+        Ok(())
     }
 
     fn put_relative_address(&mut self, address: Ref) -> Result<(), String> {
-        let placeholder = self.writer.put_i8(0);
+        let placeholder = self.writer.put_i8(0)?;
         match address {
             Ref::Label(_) => {
                 self.mark_relative_patch_location(address.clone(), placeholder as u16);
@@ -301,18 +297,25 @@ impl Assembler {
 
     fn patch_relative(&mut self, label_location: u16, address: u16) {
         let offset = label_location as i64 - address as i64 - 1;
-        self.writer.set_i8(address as usize, offset as i8).expect("Internal Error: Unable to set i8");
+        self.writer
+            .set_i8(address as usize, offset as i8)
+            .expect("Internal Error: Unable to set i8");
     }
 
-    fn put_opcode(&mut self, opcode: OpCode) {
-        self.writer.put_u8(opcode as u8);
+    fn put_opcode(&mut self, opcode: OpCode) -> Result<(), String> {
+        self.writer.put_u8(opcode as u8).map(|_| ())
     }
 
     fn fixup_patches(&mut self) {
         for (label, locations) in &self.patch_locations {
-            let address = self.label_locations.get(label).expect("Internal Error: Unable to retrieve label location");
+            let address = self
+                .label_locations
+                .get(label)
+                .expect("Internal Error: Unable to retrieve label location");
             for location in locations {
-                self.writer.set_u16(*location as usize, *address).expect("Internal Error: Unable to set u16");
+                self.writer
+                    .set_u16(*location as usize, *address)
+                    .expect("Internal Error: Unable to set u16");
             }
         }
     }
@@ -321,7 +324,10 @@ impl Assembler {
         let mut relative_patches = Vec::new();
 
         for (label, locations) in &self.relative_patch_locations {
-            let address = self.label_locations.get(label).expect("Internal Error: Unable to retrieve label location");
+            let address = self
+                .label_locations
+                .get(label)
+                .expect("Internal Error: Unable to retrieve label location");
             for location in locations {
                 relative_patches.push((*address, *location));
             }
@@ -334,17 +340,19 @@ impl Assembler {
 
     pub fn assemble(&mut self) -> Result<&[u8], String> {
         if self.next_label as usize != self.label_locations.len() {
-            let labels: Vec<u16> = self.patch_locations.keys()
+            let labels: Vec<u16> = self
+                .patch_locations
+                .keys()
                 .chain(self.relative_patch_locations.keys())
                 .filter_map(|r| match r {
                     Ref::Label(x) => Some(*x),
-                    _ => None
+                    _ => None,
                 })
                 .collect();
 
             for index in labels {
                 let label = Ref::Label(index);
-                
+
                 if !self.label_locations.contains_key(&label) {
                     return Err(format!("Unmarked label: {}", label));
                 }
@@ -649,7 +657,7 @@ mod tests {
                     fn [<$name _works>]() {
                         let mut subject = Assembler::new();
 
-                        subject.$name();
+                        subject.$name().unwrap();
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = OpCode::$op as u8;
@@ -669,7 +677,7 @@ mod tests {
                     fn [<$name _accumulator_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _accumulator>](); }
+                        paste::expr! { subject.[<$name _accumulator>]().unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ACC>] as u8 };
@@ -707,7 +715,7 @@ mod tests {
                     fn [<$name _relative_immediate_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _relative_immediate>](-2); }
+                        paste::expr! { subject.[<$name _relative_immediate>](-2).unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _REL>] as u8 };
@@ -728,7 +736,7 @@ mod tests {
                     fn [<$name _absolute_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _absolute>](256); }
+                        paste::expr! { subject.[<$name _absolute>](256).unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _AB>] as u8 };
@@ -750,7 +758,7 @@ mod tests {
                     fn [<$name _indirect_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _indirect>](256); }
+                        paste::expr! { subject.[<$name _indirect>](256).unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _IN>] as u8 };
@@ -772,7 +780,7 @@ mod tests {
                     fn [<$name _absolute_x_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _absolute_x>](256); }
+                        paste::expr! { subject.[<$name _absolute_x>](256).unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ABX>] as u8 };
@@ -794,7 +802,7 @@ mod tests {
                     fn [<$name _absolute_y_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _absolute_y>](256); }
+                        paste::expr! { subject.[<$name _absolute_y>](256).unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ABY>] as u8 };
@@ -816,7 +824,7 @@ mod tests {
                     fn [<$name _immediate_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _immediate>](42); }
+                        paste::expr! { subject.[<$name _immediate>](42).unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _IMM>] as u8 };
@@ -837,7 +845,7 @@ mod tests {
                     fn [<$name _indirect_x_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _indirect_x>](42); }
+                        paste::expr! { subject.[<$name _indirect_x>](42).unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _INX>] as u8 };
@@ -858,7 +866,7 @@ mod tests {
                     fn [<$name _indirect_y_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _indirect_y>](42); }
+                        paste::expr! { subject.[<$name _indirect_y>](42).unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _INY>] as u8 };
@@ -879,7 +887,7 @@ mod tests {
                     fn [<$name _zp_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _zp>](42); }
+                        paste::expr! { subject.[<$name _zp>](42).unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ZP>] as u8 };
@@ -900,7 +908,7 @@ mod tests {
                     fn [<$name _zpx_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _zpx>](42); }
+                        paste::expr! { subject.[<$name _zpx>](42).unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ZPX>] as u8 };
@@ -921,7 +929,7 @@ mod tests {
                     fn [<$name _zpy_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _zpy>](42); }
+                        paste::expr! { subject.[<$name _zpy>](42).unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _ZPY>] as u8 };
@@ -942,7 +950,7 @@ mod tests {
                     fn [<$name _indirect_zp_works>]() {
                         let mut subject = Assembler::new();
 
-                        paste::expr! { subject.[<$name _indirect_zp>](42); }
+                        paste::expr! { subject.[<$name _indirect_zp>](42).unwrap(); }
 
                         let mut expected = zero_vec_of_len(subject.len() as usize);
                         expected[0] = paste::expr! { OpCode::[<$op _INZP>] as u8 };
@@ -1217,12 +1225,12 @@ mod tests {
     fn labels_work() {
         let mut subject = Assembler::new();
 
-        subject.sei();
+        subject.sei().unwrap();
 
         let label = subject.label();
-        subject.jmp_absolute(label);
+        subject.jmp_absolute(label).unwrap();
 
-        subject.cli();
+        subject.cli().unwrap();
 
         subject.mark(label).unwrap();
 
@@ -1250,7 +1258,7 @@ mod tests {
         let mut subject = Assembler::new();
 
         let l = subject.label();
-        subject.jmp_absolute(l);
+        subject.jmp_absolute(l).unwrap();
 
         assert_eq!(subject.assemble(), Err(String::from("Unmarked label: L0")));
     }

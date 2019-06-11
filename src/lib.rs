@@ -15,46 +15,46 @@ mod tests {
         let mut asm = Assembler::new();
 
         let nmi = asm.label();
-        asm.jsr_absolute(nmi);
-        asm.rti();
+        asm.jsr_absolute(nmi).unwrap();
+        asm.rti().unwrap();
 
         let irq = asm.label();
-        asm.jsr_absolute(irq);
-        asm.rti();
+        asm.jsr_absolute(irq).unwrap();
+        asm.rti().unwrap();
 
         let reset = asm.cursor();
         let main = asm.label();
-        asm.jmp_absolute(main);
+        asm.jmp_absolute(main).unwrap();
 
         {
             asm.mark(nmi).unwrap();
-            asm.rts();
+            asm.rts().unwrap();
         }
 
         {
             asm.mark(irq).unwrap();
-            asm.rts();
+            asm.rts().unwrap();
         }
 
         {
             asm.mark(main).unwrap();
-            asm.sei();
+            asm.sei().unwrap();
 
-            asm.lda_immediate(3);
-            asm.sta_absolute(0xFF02);
+            asm.lda_immediate(3).unwrap();
+            asm.sta_absolute(0xFF02).unwrap();
 
             let l = asm.label();
             asm.mark(l).unwrap();
-            asm.lda_absolute(0xFEE8);
-            asm.inc_accumulator();
-            asm.and_immediate(7);
-            asm.sta_absolute(0xFEE8);
+            asm.lda_absolute(0xFEE8).unwrap();
+            asm.inc_accumulator().unwrap();
+            asm.and_immediate(7).unwrap();
+            asm.sta_absolute(0xFEE8).unwrap();
 
-            asm.lda_immediate(65);
-            asm.sta_absolute(0xFF00);
-            asm.lda_immediate(10);
-            asm.sta_absolute(0xFF00);
-            asm.jmp_absolute(l);
+            asm.lda_immediate(65).unwrap();
+            asm.sta_absolute(0xFF00).unwrap();
+            asm.lda_immediate(10).unwrap();
+            asm.sta_absolute(0xFF00).unwrap();
+            asm.jmp_absolute(l).unwrap();
 
             // asm.lda_immediate(2);
             // asm.sta_absolute(0xFF02);

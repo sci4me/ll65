@@ -13,9 +13,14 @@ impl BinaryWriter {
         }
     }
 
-    fn push(&mut self, value: u8) {
-        self.data[self.cursor] = value;
-        self.cursor += 1;
+    fn push(&mut self, value: u8) -> Result<(), String> {
+        if self.cursor >= self.data.len() {
+            Err("Attempt to write out of bounds".to_string())
+        } else {
+            self.data[self.cursor] = value;
+            self.cursor += 1;
+            Ok(())
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -30,21 +35,21 @@ impl BinaryWriter {
         self.data.as_slice()
     }
 
-    pub fn put_u8(&mut self, value: u8) -> usize {
-        self.push(value);
-        self.cursor - 1
+    pub fn put_u8(&mut self, value: u8) -> Result<usize, String> {
+        self.push(value)?;
+        Ok(self.cursor - 1)
     }
 
-    pub fn put_i8(&mut self, value: i8) -> usize {
-        self.push(value as u8);
-        self.cursor - 1
+    pub fn put_i8(&mut self, value: i8) -> Result<usize, String> {
+        self.push(value as u8)?;
+        Ok(self.cursor - 1)
     }
 
-    pub fn put_u16(&mut self, value: u16) -> usize {
+    pub fn put_u16(&mut self, value: u16) -> Result<usize, String> {
         let cursor = self.cursor;
-        self.push((value & 0xFF) as u8);
-        self.push(((value >> 8) & 0xFF) as u8);
-        cursor
+        self.push((value & 0xFF) as u8)?;
+        self.push(((value >> 8) & 0xFF) as u8)?;
+        Ok(cursor)
     }
 
     pub fn set_u8(&mut self, index: usize, value: u8) -> Result<(), String> {
@@ -84,11 +89,11 @@ mod tests {
     fn len_works() {
         let mut subject = BinaryWriter::new(100);
 
-        subject.put_u8(42);
+        subject.put_u8(42).unwrap();
 
         assert_eq!(subject.len(), 100);
 
-        subject.put_u16(256);
+        subject.put_u16(256).unwrap();
 
         assert_eq!(subject.len(), 100);
     }
@@ -97,11 +102,11 @@ mod tests {
     fn cursor_works() {
         let mut subject = BinaryWriter::new(100);
 
-        subject.put_u8(42);
+        subject.put_u8(42).unwrap();
 
         assert_eq!(subject.cursor(), 1);
 
-        subject.put_u16(256);
+        subject.put_u16(256).unwrap();
 
         assert_eq!(subject.cursor(), 3);
     }
@@ -110,8 +115,8 @@ mod tests {
     fn as_bytes_works() {
         let mut subject = BinaryWriter::new(100);
 
-        subject.put_u8(42);
-        subject.put_u16(256);
+        subject.put_u8(42).unwrap();
+        subject.put_u16(256).unwrap();
 
         let mut expected = zero_vec_of_len(100);
         expected[0] = 42;
@@ -125,8 +130,8 @@ mod tests {
     fn put_u8_works() {
         let mut subject = BinaryWriter::new(100);
 
-        assert_eq!(subject.put_u8(42), 0);
-        assert_eq!(subject.put_u8(24), 1);
+        assert_eq!(subject.put_u8(42), Ok(0));
+        assert_eq!(subject.put_u8(24), Ok(1));
 
         assert_eq!(subject.data[0], 42);
         assert_eq!(subject.data[1], 24);
@@ -136,8 +141,8 @@ mod tests {
     fn put_i8_works() {
         let mut subject = BinaryWriter::new(100);
 
-        assert_eq!(subject.put_u8(42), 0);
-        assert_eq!(subject.put_i8(-24), 1);
+        assert_eq!(subject.put_u8(42), Ok(0));
+        assert_eq!(subject.put_i8(-24), Ok(1));
 
         assert_eq!(subject.data[0], 42);
         assert_eq!(subject.data[1], -24i8 as u8);
@@ -147,7 +152,7 @@ mod tests {
     fn put_u16_works() {
         let mut subject = BinaryWriter::new(100);
 
-        assert_eq!(subject.put_u16(256), 0);
+        assert_eq!(subject.put_u16(256), Ok(0));
 
         assert_eq!(subject.cursor(), 2);
         assert_eq!(subject.data[0], 0);
@@ -158,7 +163,7 @@ mod tests {
     fn set_u8_works() {
         let mut subject = BinaryWriter::new(100);
 
-        assert_eq!(subject.put_u8(42), 0);
+        assert_eq!(subject.put_u8(42), Ok(0));
 
         assert_eq!(subject.set_u8(0, 24), Ok(()));
 
@@ -169,7 +174,7 @@ mod tests {
     fn set_i8_works() {
         let mut subject = BinaryWriter::new(100);
 
-        assert_eq!(subject.put_i8(42), 0);
+        assert_eq!(subject.put_i8(42), Ok(0));
 
         assert_eq!(subject.set_i8(0, -24), Ok(()));
 
@@ -190,7 +195,7 @@ mod tests {
     fn set_u16_works() {
         let mut subject = BinaryWriter::new(100);
 
-        assert_eq!(subject.put_u16(256), 0);
+        assert_eq!(subject.put_u16(256), Ok(0));
 
         assert_eq!(subject.set_u16(0, 24), Ok(()));
 
@@ -205,6 +210,17 @@ mod tests {
         assert_eq!(
             subject.set_u16(4, 24),
             Err(String::from("Index out of bounds: 4"))
+        );
+    }
+
+    #[test]
+    fn push_returns_err_if_out_of_bounds() {
+        let mut subject = BinaryWriter::new(1);
+
+        assert_eq!(subject.push(42), Ok(()));
+        assert_eq!(
+            subject.push(42),
+            Err("Attempt to write out of bounds".to_string())
         );
     }
 }
