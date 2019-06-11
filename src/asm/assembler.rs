@@ -1,5 +1,5 @@
-use crate::binary_writer::BinaryWriter;
-use crate::opcodes::OpCode;
+use crate::asm::binary_writer::BinaryWriter;
+use crate::asm::opcodes::OpCode;
 use paste;
 use std::collections::HashMap;
 use std::fmt;
@@ -58,7 +58,7 @@ macro_rules! generate_relative_instructions {
 
                 pub fn [<$name _relative_immediate>](&mut self, offset: i8) -> Result<(), String> {
                     self.put_opcode(paste::expr! { OpCode::[<$op _REL>] })?;
-                    self.writer.put_i8(offset).map(|_| ())
+                    self.writer.put_u8(offset as u8).map(|_| ())
                 }
             }
         )*
@@ -267,7 +267,7 @@ impl Assembler {
     }
 
     fn put_relative_address(&mut self, address: Ref) -> Result<(), String> {
-        let placeholder = self.writer.put_i8(0)?;
+        let placeholder = self.writer.put_u8(0)?;
         match address {
             Ref::Label(_) => {
                 self.mark_relative_patch_location(address, placeholder as u16);
@@ -304,7 +304,7 @@ impl Assembler {
     fn patch_relative(&mut self, label_location: u16, address: u16) {
         let offset = i64::from(label_location) - i64::from(address) - 1;
         self.writer
-            .set_i8(address as usize, offset as i8)
+            .set_u8(address as usize, offset as u8)
             .expect("Internal Error: Unable to set i8");
     }
 

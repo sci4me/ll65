@@ -23,10 +23,6 @@ impl BinaryWriter {
         }
     }
 
-    pub fn capacity(&self) -> usize {
-        self.data.len()
-    }
-
     pub fn cursor(&self) -> usize {
         self.cursor
     }
@@ -37,11 +33,6 @@ impl BinaryWriter {
 
     pub fn put_u8(&mut self, value: u8) -> Result<usize, String> {
         self.push(value)?;
-        Ok(self.cursor - 1)
-    }
-
-    pub fn put_i8(&mut self, value: i8) -> Result<usize, String> {
-        self.push(value as u8)?;
         Ok(self.cursor - 1)
     }
 
@@ -61,15 +52,6 @@ impl BinaryWriter {
         }
     }
 
-    pub fn set_i8(&mut self, index: usize, value: i8) -> Result<(), String> {
-        if index >= self.data.len() {
-            Err(format!("Index out of bounds: {}", index))
-        } else {
-            self.data[index] = value as u8;
-            Ok(())
-        }
-    }
-
     pub fn set_u16(&mut self, index: usize, value: u16) -> Result<(), String> {
         if index + 1 >= self.data.len() {
             Err(format!("Index out of bounds: {}", index))
@@ -84,19 +66,6 @@ impl BinaryWriter {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn len_works() {
-        let mut subject = BinaryWriter::new(100);
-
-        subject.put_u8(42).unwrap();
-
-        assert_eq!(subject.capacity(), 100);
-
-        subject.put_u16(256).unwrap();
-
-        assert_eq!(subject.capacity(), 100);
-    }
 
     #[test]
     fn cursor_works() {
@@ -138,17 +107,6 @@ mod tests {
     }
 
     #[test]
-    fn put_i8_works() {
-        let mut subject = BinaryWriter::new(100);
-
-        assert_eq!(subject.put_u8(42), Ok(0));
-        assert_eq!(subject.put_i8(-24), Ok(1));
-
-        assert_eq!(subject.data[0], 42);
-        assert_eq!(subject.data[1], -24i8 as u8);
-    }
-
-    #[test]
     fn put_u16_works() {
         let mut subject = BinaryWriter::new(100);
 
@@ -168,17 +126,6 @@ mod tests {
         assert_eq!(subject.set_u8(0, 24), Ok(()));
 
         assert_eq!(subject.data[0], 24);
-    }
-
-    #[test]
-    fn set_i8_works() {
-        let mut subject = BinaryWriter::new(100);
-
-        assert_eq!(subject.put_i8(42), Ok(0));
-
-        assert_eq!(subject.set_i8(0, -24), Ok(()));
-
-        assert_eq!(subject.data[0], -24i8 as u8);
     }
 
     #[test]
