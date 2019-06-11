@@ -344,7 +344,7 @@ impl Assembler {
         }
     }
 
-    pub fn assemble(&mut self) -> Result<&[u8], String> {
+    fn check_for_unmarked_labels(&self) -> Result<(), String> {
         if self.next_label as usize != self.label_locations.len() {
             let labels: Vec<u16> = self
                 .patch_locations
@@ -364,10 +364,13 @@ impl Assembler {
                 }
             }
         }
+        Ok(())
+    }
 
+    pub fn assemble(&mut self) -> Result<&[u8], String> {
+        self.check_for_unmarked_labels()?;
         self.fixup_patches();
         self.fixup_relative_patches();
-
         Ok(self.writer.as_bytes())
     }
 
