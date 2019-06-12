@@ -26,6 +26,9 @@ pub enum TokenKind {
     HighByte,
     LowByte,
 
+    Macro,
+    MacroParameter(String),
+
     Label(String),
     Ident(String),
     Int(String),
