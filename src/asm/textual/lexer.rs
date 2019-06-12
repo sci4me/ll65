@@ -3,7 +3,7 @@ pub struct Token {
     pub line: u32,
     pub column: u32,
     pub raw: String,
-    pub kind: TokenKind
+    pub kind: TokenKind,
 }
 
 impl Token {
@@ -12,7 +12,7 @@ impl Token {
             line,
             column,
             raw,
-            kind
+            kind,
         }
     }
 }
@@ -23,9 +23,14 @@ pub enum TokenKind {
     IrqVector,
     NmiVector,
 
+    HighByte,
+    LowByte,
+
     Label(String),
     Ident(String),
     Int(String),
+    Char(char),
+    Str(String),
 
     Adc,
     And,
@@ -96,7 +101,7 @@ pub enum TokenKind {
     Plx,
     Ply,
     Wai,
-    Stp
+    Stp,
 }
 
 pub struct Lexer {
@@ -106,7 +111,7 @@ pub struct Lexer {
     next: Option<Token>,
     rescan: bool,
     line: u32,
-    column: u32
+    column: u32,
 }
 
 impl Lexer {
@@ -118,7 +123,7 @@ impl Lexer {
             next: None,
             rescan: false,
             line: 1,
-            column: 1
+            column: 1,
         };
         result.find_next_token()?;
         Ok(result)
@@ -129,7 +134,7 @@ impl Lexer {
     }
 
     fn peek(&self) -> char {
-        self.source[self.curr]   
+        self.source[self.curr]
     }
 
     fn next(&mut self) -> char {
@@ -166,7 +171,12 @@ impl Lexer {
     fn emit(&mut self, token: TokenKind) {
         assert!(!self.has_token());
         let s = self.current();
-        self.next = Some(Token::new(self.line, self.column - s.len() as u32, s, token));
+        self.next = Some(Token::new(
+            self.line,
+            self.column - s.len() as u32,
+            s,
+            token,
+        ));
         self.start = self.curr;
     }
 
@@ -176,9 +186,9 @@ impl Lexer {
                 '\n' => {
                     self.line += 1;
                     self.column = 0;
-                },
-                '\t' | ' ' => { },
-                _ => break
+                }
+                '\t' | ' ' => {}
+                _ => break,
             }
             self.next();
         }
@@ -199,7 +209,7 @@ impl Lexer {
                 self.ignore();
                 self.line += 1;
                 self.column = 1;
-            },
+            }
             '.' => {
                 self.accept_run("abcdefghijklmnopqrstuvwxyz");
                 let curr = self.current();
@@ -207,8 +217,45 @@ impl Lexer {
                     ".reset" => self.emit(TokenKind::ResetVector),
                     ".irq" => self.emit(TokenKind::IrqVector),
                     ".nmi" => self.emit(TokenKind::NmiVector),
-                    _ => return Err(String::from(format!("Unexpected directive: {}", curr)))
+                    _ => return Err(format!("Unexpected directive: {}", curr)),
                 }
+            }
+            '>' => self.emit(TokenKind::HighByte),
+            '<' => self.emit(TokenKind::LowByte),
+            '\'' => {
+                let result;
+
+                if self.accept("\\") {
+                    if self.accept("\\") {
+                        result = TokenKind::Char('\\');
+                    } else if self.accept("\"") {
+                        result = TokenKind::Char('\"');
+                    } else if self.accept("'") {
+                        result = TokenKind::Char('\'');
+                    } else if self.accept("n") {
+                        result = TokenKind::Char('\n');
+                    } else {
+                        return Err(format!("Unexpected escape character: {}", self.peek()));
+                    }
+                } else {
+                    result = TokenKind::Char(self.next());
+                }
+
+                if self.accept("'") {
+                    self.emit(result);
+                } else {
+                    return Err(String::from("Unclosed character"));
+                }
+            },
+            '"' => {
+                unimplemented!();
+            },
+            ';' => {
+                while self.more() && self.next() != '\n' {}
+                self.line += 1;
+                self.column = 1;
+                self.ignore();
+                self.rescan = true;
             },
             _ => {
                 if c == '0' && self.more() && self.peek() == 'x' {
@@ -235,9 +282,11 @@ impl Lexer {
                     self.emit(TokenKind::Int(s[2..].to_string()));
                 } else if c >= '1' && c <= '9' {
                     self.accept_run("0123456789");
-                    self.emit(TokenKind::Int(self.current().to_string()))                    
+                    self.emit(TokenKind::Int(self.current().to_string()))
                 } else if char::is_alphabetic(c) || c == '_' {
-                    self.accept_run("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789");
+                    self.accept_run(
+                        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789",
+                    );
 
                     let curr = self.current();
 
@@ -315,7 +364,7 @@ impl Lexer {
                             "ply" => self.emit(TokenKind::Ply),
                             "wai" => self.emit(TokenKind::Wai),
                             "stp" => self.emit(TokenKind::Stp),
-                            _ => self.emit(TokenKind::Ident(curr))
+                            _ => self.emit(TokenKind::Ident(curr)),
                         }
                     }
                 } else {
