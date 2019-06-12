@@ -2,7 +2,7 @@ use std::fs;
 use std::process;
 use clap::*;
 
-use ll65::asm::textual::Lexer;
+use ll65::asm::textual::lexer::Lexer;
 
 fn main() {
     let matches = App::new(crate_name!())
