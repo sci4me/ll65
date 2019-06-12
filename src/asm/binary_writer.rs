@@ -6,9 +6,9 @@ pub struct BinaryWriter {
 }
 
 impl BinaryWriter {
-    pub fn new(size: usize) -> Self {
+    pub fn new(capacity: usize) -> Self {
         Self {
-            data: zero_vec_of_len(size),
+            data: zero_vec_of_len(capacity),
             cursor: 0,
         }
     }
@@ -21,6 +21,10 @@ impl BinaryWriter {
             self.cursor += 1;
             Ok(())
         }
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.data.len()
     }
 
     pub fn cursor(&self) -> usize {

@@ -236,16 +236,10 @@ pub struct Assembler {
     label_locations: HashMap<Ref, u16>,
 }
 
-impl Default for Assembler {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl Assembler {
-    pub fn new() -> Self {
+    pub fn new(capacity: usize) -> Self {
         Self {
-            writer: BinaryWriter::new(0x10000),
+            writer: BinaryWriter::new(capacity),
             next_label: 0,
             patch_locations: HashMap::new(),
             relative_patch_locations: HashMap::new(),
@@ -372,6 +366,10 @@ impl Assembler {
         self.fixup_patches();
         self.fixup_relative_patches();
         Ok(self.writer.as_bytes())
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.writer.capacity()
     }
 
     pub fn cursor(&self) -> u16 {
@@ -660,11 +658,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         subject.$name().unwrap();
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = OpCode::$op as u8;
 
                         assert_eq!(subject.assemble(), Ok(expected.as_slice()));
@@ -680,11 +678,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _accumulator_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         paste::expr! { subject.[<$name _accumulator>]().unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _ACC>] as u8 };
 
                         assert_eq!(subject.assemble(), Ok(expected.as_slice()));
@@ -700,14 +698,14 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _relative_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         let l = subject.label();
                         subject.mark(l).unwrap();
 
                         paste::expr! { subject.[<$name _relative>](l).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _REL>] as u8 };
                         expected[1] = -2i8 as u8;
 
@@ -718,11 +716,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _relative_immediate_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         paste::expr! { subject.[<$name _relative_immediate>](-2).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _REL>] as u8 };
                         expected[1] = -2i8 as u8;
 
@@ -739,11 +737,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _absolute_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         paste::expr! { subject.[<$name _absolute>](256).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _AB>] as u8 };
                         expected[1] = 0;
                         expected[2] = 1;
@@ -761,11 +759,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _indirect_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         paste::expr! { subject.[<$name _indirect>](256).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _IN>] as u8 };
                         expected[1] = 0;
                         expected[2] = 1;
@@ -783,11 +781,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _absolute_x_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         paste::expr! { subject.[<$name _absolute_x>](256).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _ABX>] as u8 };
                         expected[1] = 0;
                         expected[2] = 1;
@@ -805,11 +803,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _absolute_y_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         paste::expr! { subject.[<$name _absolute_y>](256).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _ABY>] as u8 };
                         expected[1] = 0;
                         expected[2] = 1;
@@ -827,11 +825,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _immediate_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         paste::expr! { subject.[<$name _immediate>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _IMM>] as u8 };
                         expected[1] = 42;
 
@@ -848,11 +846,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _indirect_x_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         paste::expr! { subject.[<$name _indirect_x>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _INX>] as u8 };
                         expected[1] = 42;
 
@@ -869,11 +867,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _indirect_y_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         paste::expr! { subject.[<$name _indirect_y>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _INY>] as u8 };
                         expected[1] = 42;
 
@@ -890,11 +888,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _zp_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         paste::expr! { subject.[<$name _zp>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _ZP>] as u8 };
                         expected[1] = 42;
 
@@ -911,11 +909,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _zpx_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         paste::expr! { subject.[<$name _zpx>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _ZPX>] as u8 };
                         expected[1] = 42;
 
@@ -932,11 +930,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _zpy_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         paste::expr! { subject.[<$name _zpy>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _ZPY>] as u8 };
                         expected[1] = 42;
 
@@ -953,11 +951,11 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _indirect_zp_works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         paste::expr! { subject.[<$name _indirect_zp>](42).unwrap(); }
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op _INZP>] as u8 };
                         expected[1] = 42;
 
@@ -974,7 +972,7 @@ mod tests {
                 paste::item! {
                     #[test]
                     fn [<$name _works>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         subject.$name(0).unwrap();
                         subject.$name(1).unwrap();
@@ -985,7 +983,7 @@ mod tests {
                         subject.$name(6).unwrap();
                         subject.$name(7).unwrap();
 
-                        let mut expected = zero_vec_of_len(0x10000);
+                        let mut expected = zero_vec_of_len(0x100);
                         expected[0] = paste::expr! { OpCode::[<$op 0>] as u8 };
                         expected[1] = paste::expr! { OpCode::[<$op 1>] as u8 };
                         expected[2] = paste::expr! { OpCode::[<$op 2>] as u8 };
@@ -1000,7 +998,7 @@ mod tests {
 
                     #[test]
                     fn [<$name _panics_if_parameter_is_out_of_bounds>]() {
-                        let mut subject = Assembler::new();
+                        let mut subject = Assembler::new(0x100);
 
                         assert_eq!(subject.$name(8), Err(String::from("Expected bit value 0-7, got 8")))
                     }
@@ -1228,7 +1226,7 @@ mod tests {
 
     #[test]
     fn labels_work() {
-        let mut subject = Assembler::new();
+        let mut subject = Assembler::new(0x100);
 
         subject.sei().unwrap();
 
@@ -1239,7 +1237,7 @@ mod tests {
 
         subject.mark(label).unwrap();
 
-        let mut expected = zero_vec_of_len(0x10000);
+        let mut expected = zero_vec_of_len(0x100);
         expected[0] = OpCode::SEI as u8;
         expected[1] = OpCode::JMP_AB as u8;
         expected[2] = 5;
@@ -1251,16 +1249,16 @@ mod tests {
 
     #[test]
     fn unused_labels_are_allowed() {
-        let mut subject = Assembler::new();
+        let mut subject = Assembler::new(0x100);
 
         subject.label();
 
-        assert_eq!(subject.assemble(), Ok(zero_vec_of_len(0x10000).as_slice()));
+        assert_eq!(subject.assemble(), Ok(zero_vec_of_len(0x100).as_slice()));
     }
 
     #[test]
     fn labels_complain_when_unmarked() {
-        let mut subject = Assembler::new();
+        let mut subject = Assembler::new(0x100);
 
         let l = subject.label();
         subject.jmp_absolute(l).unwrap();
