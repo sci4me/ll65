@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub line: u32,
     pub column: u32,
@@ -17,7 +17,7 @@ impl Token {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
     ResetVector,
     IrqVector,
@@ -397,5 +397,20 @@ impl Lexer {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn token_new_works() {
+        assert_eq!(Token::new(42, 24, "blah".to_string(), TokenKind::Int("42".to_string())), Token {
+            line: 42,
+            column: 24,
+            raw: "blah".to_string(),
+            kind: TokenKind::Int("42".to_string())
+        });
     }
 }
