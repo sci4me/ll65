@@ -246,17 +246,17 @@ impl Lexer {
                 } else {
                     return Err(String::from("Unclosed character"));
                 }
-            },
+            }
             '"' => {
                 unimplemented!();
-            },
+            }
             ';' => {
                 while self.more() && self.next() != '\n' {}
                 self.line += 1;
                 self.column = 1;
                 self.ignore();
                 self.rescan = true;
-            },
+            }
             _ => {
                 if c == '0' && self.more() && self.peek() == 'x' {
                     self.next();
@@ -406,11 +406,14 @@ mod tests {
 
     #[test]
     fn token_new_works() {
-        assert_eq!(Token::new(42, 24, "blah".to_string(), TokenKind::Int("42".to_string())), Token {
-            line: 42,
-            column: 24,
-            raw: "blah".to_string(),
-            kind: TokenKind::Int("42".to_string())
-        });
+        assert_eq!(
+            Token::new(42, 24, "blah".to_string(), TokenKind::Int("42".to_string())),
+            Token {
+                line: 42,
+                column: 24,
+                raw: "blah".to_string(),
+                kind: TokenKind::Int("42".to_string())
+            }
+        );
     }
 }
