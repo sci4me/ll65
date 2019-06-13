@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Span {
     pub start: usize,
@@ -130,6 +132,7 @@ pub struct Lexer {
     rescan: bool,
     line: u32,
     column: u32,
+    line_map: HashMap<usize, u32>
 }
 
 impl Lexer {
@@ -142,9 +145,21 @@ impl Lexer {
             rescan: false,
             line: 1,
             column: 1,
+            line_map: HashMap::new()
         };
+        result.compute_line_map();
         result.find_next_token()?;
         Ok(result)
+    }
+
+    fn compute_line_map(&mut self) {
+        let mut line = 1;
+        for i in 0..self.source.len() {
+            if self.source[i] == '\n' {
+                line += 1;
+            }
+            self.line_map.insert(i, line);
+        }
     }
 
     fn more(&self) -> bool {
@@ -425,6 +440,27 @@ impl Lexer {
         Ok(())
     }
 
+    pub fn line(&self) -> u32 {
+        self.line
+    }
+
+    pub fn column(&self) -> u32 {
+        self.column
+    }
+
+    pub fn index_to_line(&self, index: usize) -> u32 {
+        assert!(index < self.source.len());
+        *self.line_map.get(&index).expect("Internal Error")
+    }
+
+    pub fn span(&self) -> Span {
+        if self.curr == self.source.len() {
+            Span::new(self.start, self.curr - 1)
+        } else {
+            Span::new(self.start, self.curr)
+        }
+    }
+
     pub fn get_in_span(&self, span: Span) -> String {
         self.source[span.start..span.end].iter().collect::<String>()
     }
@@ -456,6 +492,8 @@ impl Lexer {
     }
 
     pub fn get_lines_in_span(&self, span: Span) -> Vec<String> {
+        assert!(span.end < self.source.len());
+
         let mut result = Vec::new();
 
         let mut last: Option<String> = None;
@@ -482,6 +520,11 @@ impl Lexer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn span_new_works() {
+        assert_eq!(Span::new(1, 4), Span{start: 1, end: 4});
+    }
 
     #[test]
     fn token_new_works() {
