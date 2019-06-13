@@ -1,5 +1,18 @@
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+}
+
+impl Span {
+    pub fn new(start: usize, end: usize) -> Self {
+        Self { start, end }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
+    pub span: Span,
     pub line: u32,
     pub column: u32,
     pub raw: String,
@@ -7,8 +20,9 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(line: u32, column: u32, raw: String, kind: TokenKind) -> Self {
+    pub fn new(span: Span, line: u32, column: u32, raw: String, kind: TokenKind) -> Self {
         Self {
+            span,
             line,
             column,
             raw,
@@ -27,6 +41,7 @@ pub enum TokenKind {
     LowByte,
 
     Macro,
+    EndMacro,
     MacroParameter(String),
 
     Label(String),
@@ -175,6 +190,7 @@ impl Lexer {
         assert!(!self.has_token());
         let s = self.current();
         self.next = Some(Token::new(
+            Span::new(self.start, self.curr),
             self.line,
             self.column - s.len() as u32,
             s,
@@ -220,11 +236,18 @@ impl Lexer {
                     ".reset" => self.emit(TokenKind::ResetVector),
                     ".irq" => self.emit(TokenKind::IrqVector),
                     ".nmi" => self.emit(TokenKind::NmiVector),
+                    ".macro" => self.emit(TokenKind::Macro),
+                    ".endmacro" => self.emit(TokenKind::EndMacro),
                     _ => return Err(format!("Unexpected directive: {}", curr)),
                 }
             }
             '>' => self.emit(TokenKind::HighByte),
             '<' => self.emit(TokenKind::LowByte),
+            '$' => {
+                self.accept_run("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_");
+                self.accept_run("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789");
+                self.emit(TokenKind::MacroParameter(self.current()[1..].to_string()));
+            }
             '\'' => {
                 let result;
 
@@ -383,7 +406,7 @@ impl Lexer {
         self.next.is_some()
     }
 
-    pub fn get_token(&mut self) -> Token {
+    pub fn get_token(&self) -> Token {
         self.next.clone().unwrap()
     }
 
@@ -401,6 +424,59 @@ impl Lexer {
 
         Ok(())
     }
+
+    pub fn get_in_span(&self, span: Span) -> String {
+        self.source[span.start..span.end].iter().collect::<String>()
+    }
+
+    pub fn get_line(&self, index: usize) -> String {
+        assert!(self.source[index] != '\n');
+
+        let start = {
+            let mut i = index;
+            loop {
+                if i == 0 || self.source[i - 1] == '\n' {
+                    break i;
+                }
+                i -= 1;
+            }
+        };
+
+        let end = {
+            let mut i = index;
+            loop {
+                if i + 1 >= self.source.len() || self.source[i + 1] == '\n' {
+                    break i;
+                }
+                i += 1;
+            }
+        };
+
+        self.source[start..end+1].iter().collect::<String>()
+    }
+
+    pub fn get_lines_in_span(&self, span: Span) -> Vec<String> {
+        let mut result = Vec::new();
+
+        let mut last: Option<String> = None;
+        for i in span.start..span.end+1 {
+            if self.source[i] == '\n' {
+                continue;
+            }
+
+            let curr = self.get_line(i);
+            if let Some(last) = last {
+                if last != curr {
+                    result.push(curr.clone());
+                }
+            } else {
+                result.push(curr.clone());
+            }
+            last = Some(curr);
+        }
+
+        result
+    }
 }
 
 #[cfg(test)]
@@ -410,8 +486,15 @@ mod tests {
     #[test]
     fn token_new_works() {
         assert_eq!(
-            Token::new(42, 24, "blah".to_string(), TokenKind::Int("42".to_string())),
+            Token::new(
+                Span::new(4, 8),
+                42,
+                24,
+                "blah".to_string(),
+                TokenKind::Int("42".to_string())
+            ),
             Token {
+                span: Span { start: 4, end: 8 },
                 line: 42,
                 column: 24,
                 raw: "blah".to_string(),

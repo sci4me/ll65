@@ -3,6 +3,7 @@ use std::fs;
 use std::process;
 
 use ll65::asm::textual::lexer::Lexer;
+use ll65::asm::textual::lexer::Span;
 
 fn main() {
     let matches = App::new(crate_name!())
@@ -31,7 +32,22 @@ fn main() {
     let mut lexer = Lexer::new(contents).unwrap();
 
     while lexer.has_token() {
-        println!("{:?}", lexer.get_token());
+        println!(
+            "{:?}\n{:?}",
+            lexer.get_token(),
+            lexer.get_line(lexer.get_token().span.start)
+        );
         lexer.eat_token().unwrap();
     }
+
+    let lines = lexer.get_lines_in_span(Span::new(114, 134))
+        .iter()
+        .fold(String::new(), |sum, curr| {
+            if sum == "" {
+                curr.clone()
+            } else {
+                sum + "\n" + curr
+            }
+        });
+    println!("{}", lines);
 }
