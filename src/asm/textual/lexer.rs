@@ -283,8 +283,10 @@ impl Lexer {
                     } else {
                         return Err(format!("Unexpected escape character: {}", self.peek()));
                     }
-                } else {
+                } else if self.more() {
                     result = TokenKind::Char(self.next());
+                } else {
+                    return Err(String::from("Unclosed character"));
                 }
 
                 if self.accept("'") {
@@ -311,7 +313,7 @@ impl Lexer {
                     let s = self.current();
 
                     if s.len() == 2 {
-                        return Err(String::from("Empty hex literal"));
+                        return Err(String::from("Incomplete hex literal"));
                     }
 
                     self.emit(TokenKind::Int(s[2..].to_string()));
@@ -322,7 +324,7 @@ impl Lexer {
                     let s = self.current();
 
                     if s.len() == 2 {
-                        return Err(String::from("Empty hex literal"));
+                        return Err(String::from("Incomplete binary literal"));
                     }
 
                     self.emit(TokenKind::Int(s[2..].to_string()));
@@ -526,10 +528,14 @@ impl Lexer {
         result.push_str(&format!("\u{001b}[31m\u{001b}[1merror:\u{001b}[37m {}\u{001b}[0m\n", error));
         result.push_str(&format!("   \u{001b}[34;1m-->\u{001b}[0m {}\n", &self.file));
         let span = self.span();
-        let lines = (span.start..span.end)
-            .into_iter()
-            .map(|i| (self.index_to_line(i), i))
-            .collect::<Vec<(u32, usize)>>();
+        let lines = if span.start == span.end {
+            vec![(self.index_to_line(span.start), span.start)]
+        } else {
+            (span.start..span.end)
+                .into_iter()
+                .map(|i| (self.index_to_line(i), i))
+                .collect::<Vec<(u32, usize)>>()
+        };
         let lines = {
             let mut index = 0;
             let mut last = lines[index];
