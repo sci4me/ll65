@@ -23,7 +23,14 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(file: String, span: Span, line: u32, column: u32, raw: String, kind: TokenKind) -> Self {
+    pub fn new(
+        file: String,
+        span: Span,
+        line: u32,
+        column: u32,
+        raw: String,
+        kind: TokenKind,
+    ) -> Self {
         Self {
             file,
             span,
@@ -51,6 +58,20 @@ pub enum TokenKind {
     Elif,
     Else,
     Endif,
+    For,
+
+    Eq,
+    Ne,
+    Lt,
+    Gt,
+    Lte,
+    Gte,
+    BooleanNot,
+    BooleanAnd,
+    BooleanOr,
+    BitwiseNot,
+    BitwiseAnd,
+    BitwiseOr,
 
     Label(String),
     Ident(String),
@@ -139,7 +160,7 @@ pub struct Lexer {
     rescan: bool,
     line: u32,
     column: u32,
-    line_map: HashMap<usize, u32>
+    line_map: HashMap<usize, u32>,
 }
 
 impl Lexer {
@@ -153,7 +174,7 @@ impl Lexer {
             rescan: false,
             line: 1,
             column: 1,
-            line_map: HashMap::new()
+            line_map: HashMap::new(),
         };
         result.compute_line_map();
         result.find_next_token()?;
@@ -238,6 +259,10 @@ impl Lexer {
         self.ignore();
     }
 
+    fn unexpected(&self) -> Result<(), String> {
+        Err(format!("Unexpected character: '{}'", self.peek()))
+    }
+
     fn find_next_token(&mut self) -> Result<(), String> {
         self.skip_whitespace();
 
@@ -266,11 +291,62 @@ impl Lexer {
                     ".elif" => self.emit(TokenKind::Elif),
                     ".else" => self.emit(TokenKind::Else),
                     ".endif" => self.emit(TokenKind::Endif),
+                    ".for" => self.emit(TokenKind::For),
                     _ => return Err(format!("Unexpected directive: {}", curr)),
                 }
             }
-            '>' => self.emit(TokenKind::HighByte),
-            '<' => self.emit(TokenKind::LowByte),
+            '=' => {
+                if self.accept("=") {
+                    self.emit(TokenKind::Eq);
+                } else {
+                    return self.unexpected();
+                }
+            }
+            '!' => {
+                if self.accept("=") {
+                    self.emit(TokenKind::Ne);
+                } else {
+                    self.emit(TokenKind::BooleanNot);
+                }
+            }
+            '~' => self.emit(TokenKind::BitwiseNot),
+            '&' => {
+                if self.accept("&") {
+                    self.emit(TokenKind::BooleanAnd);
+                } else {
+                    self.emit(TokenKind::BitwiseAnd);
+                }
+            }
+            '|' => {
+                if self.accept("|") {
+                    self.emit(TokenKind::BooleanOr);
+                } else {
+                    self.emit(TokenKind::BitwiseOr);
+                }
+            }
+            '<' => {
+                if self.accept("=") {
+                    self.emit(TokenKind::Lte);
+                } else {
+                    self.emit(TokenKind::Lt);
+                }
+            }
+            '>' => {
+                if self.accept("=") {
+                    self.emit(TokenKind::Gte);
+                } else {
+                    self.emit(TokenKind::Gt);
+                }
+            }
+            '\\' => {
+                if self.accept("<") {
+                    self.emit(TokenKind::LowByte);
+                } else if self.accept(">") {
+                    self.emit(TokenKind::HighByte);
+                } else {
+                    return self.unexpected();
+                }
+            }
             '$' => {
                 self.accept_run("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_");
                 self.accept_run("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789");
@@ -503,7 +579,7 @@ impl Lexer {
             }
         };
 
-        self.source[start..end+1].iter().collect::<String>()
+        self.source[start..end + 1].iter().collect::<String>()
     }
 
     pub fn get_lines_in_span(&self, span: Span) -> Vec<String> {
@@ -512,7 +588,7 @@ impl Lexer {
         let mut result = Vec::new();
 
         let mut last: Option<String> = None;
-        for i in span.start..span.end+1 {
+        for i in span.start..span.end + 1 {
             if self.source[i] == '\n' {
                 continue;
             }
@@ -533,7 +609,10 @@ impl Lexer {
 
     pub fn format_error_message(&self, error: String) -> String {
         let mut result = String::new();
-        result.push_str(&format!("\u{001b}[31m\u{001b}[1merror:\u{001b}[37m {}\u{001b}[0m\n", error));
+        result.push_str(&format!(
+            "\u{001b}[31m\u{001b}[1merror:\u{001b}[37m {}\u{001b}[0m\n",
+            error
+        ));
         result.push_str(&format!("   \u{001b}[34;1m-->\u{001b}[0m {}\n", &self.file));
         let span = self.span();
         let lines = if span.start == span.end {
@@ -551,9 +630,18 @@ impl Lexer {
             while index < lines.len() {
                 let curr = lines[index];
                 if curr.0 != last.0 {
-                    result = format!("{}\n  \u{001b}[34m;1m{} |\u{001b}[0m {}", result, curr.0, self.get_line(curr.1));
+                    result = format!(
+                        "{}\n  \u{001b}[34m;1m{} |\u{001b}[0m {}",
+                        result,
+                        curr.0,
+                        self.get_line(curr.1)
+                    );
                 } else if result.is_empty() {
-                    result = format!(" \u{001b}[34;1m{} |\u{001b}[0m {}", curr.0, self.get_line(curr.1));
+                    result = format!(
+                        " \u{001b}[34;1m{} |\u{001b}[0m {}",
+                        curr.0,
+                        self.get_line(curr.1)
+                    );
                 }
                 index += 1;
                 last = curr;
@@ -573,14 +661,14 @@ mod tests {
 
     #[test]
     fn span_new_works() {
-        assert_eq!(Span::new(1, 4), Span{start: 1, end: 4});
+        assert_eq!(Span::new(1, 4), Span { start: 1, end: 4 });
     }
 
     #[test]
     fn token_new_works() {
         assert_eq!(
             Token::new(
-                "foo.s".to_string(), 
+                "foo.s".to_string(),
                 Span::new(4, 8),
                 42,
                 24,

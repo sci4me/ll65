@@ -38,7 +38,7 @@ fn main() {
         );
 
         match lexer.eat_token() {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 eprintln!("{}", lexer.format_error_message(e));
                 std::process::exit(1);
