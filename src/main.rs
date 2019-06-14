@@ -36,8 +36,8 @@ fn main() {
             // lexer.get_token(),
             // lexer.get_line(lexer.get_token().span.start)
         // );
-        // println!("{:?}", lexer.get_token());
-        println!("{:?}", lexer.get_line(lexer.get_token().span.start));
+        println!("{:?}", lexer.get_token());
+        // println!("{:?}", lexer.get_line(lexer.get_token().span.start));
 
         match lexer.eat_token() {
             Ok(_) => {}

@@ -58,6 +58,8 @@ pub enum TokenKind {
     Elif,
     Else,
     For,
+    Byte,
+    Word,
 
     Eq,
     Ne,
@@ -85,6 +87,7 @@ pub enum TokenKind {
     Rbrack,
 
     Pound,
+    Colon,
 
     Label(String),
     Ident(String),
@@ -304,6 +307,8 @@ impl Lexer {
                     ".elif" => self.emit(TokenKind::Elif),
                     ".else" => self.emit(TokenKind::Else),
                     ".for" => self.emit(TokenKind::For),
+                    ".byte" => self.emit(TokenKind::Byte),
+                    ".word" => self.emit(TokenKind::Word),
                     _ => return Err(format!("Unexpected directive: {}", curr)),
                 }
             }
@@ -352,6 +357,7 @@ impl Lexer {
             '[' => self.emit(TokenKind::Lbrack),
             ']' => self.emit(TokenKind::Rbrack),
             '#' => self.emit(TokenKind::Pound),
+            ':' => self.emit(TokenKind::Colon),
             '<' => {
                 if self.accept("=") {
                     self.emit(TokenKind::Lte);
