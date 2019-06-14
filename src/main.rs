@@ -32,9 +32,9 @@ fn main() {
 
     while lexer.has_token() {
         // println!(
-            // "{:?}\n{:?}",
-            // lexer.get_token(),
-            // lexer.get_line(lexer.get_token().span.start)
+        // "{:?}\n{:?}",
+        // lexer.get_token(),
+        // lexer.get_line(lexer.get_token().span.start)
         // );
         println!("{:?}", lexer.get_token());
         // println!("{:?}", lexer.get_line(lexer.get_token().span.start));

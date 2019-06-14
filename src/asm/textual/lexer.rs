@@ -52,8 +52,8 @@ pub enum TokenKind {
     LowByte,
 
     End,
-    Macro,
     Variable(String),
+    Macro,
     If,
     Elif,
     Else,
@@ -73,7 +73,8 @@ pub enum TokenKind {
     BitwiseNot,
     BitwiseAnd,
     BitwiseOr,
-    
+    BitwiseXor,
+
     Add,
     Sub,
     Mul,
@@ -341,6 +342,7 @@ impl Lexer {
                     self.emit(TokenKind::BitwiseOr);
                 }
             }
+            '^' => self.emit(TokenKind::BitwiseXor),
             '+' => self.emit(TokenKind::Add),
             '-' => self.emit(TokenKind::Sub),
             '*' => {
