@@ -14,6 +14,7 @@ impl Span {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
+    pub file: String,
     pub span: Span,
     pub line: u32,
     pub column: u32,
@@ -22,8 +23,9 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(span: Span, line: u32, column: u32, raw: String, kind: TokenKind) -> Self {
+    pub fn new(file: String, span: Span, line: u32, column: u32, raw: String, kind: TokenKind) -> Self {
         Self {
+            file,
             span,
             line,
             column,
@@ -125,6 +127,7 @@ pub enum TokenKind {
 }
 
 pub struct Lexer {
+    file: String,
     source: Vec<char>,
     start: usize,
     curr: usize,
@@ -136,8 +139,9 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn new(source: String) -> Result<Self, String> {
+    pub fn new(file: String, source: String) -> Result<Self, String> {
         let mut result = Self {
+            file,
             source: source.chars().collect::<Vec<char>>(),
             start: 0,
             curr: 0,
@@ -205,6 +209,7 @@ impl Lexer {
         assert!(!self.has_token());
         let s = self.current();
         self.next = Some(Token::new(
+            self.file.clone(),
             Span::new(self.start, self.curr),
             self.line,
             self.column - s.len() as u32,
@@ -530,6 +535,7 @@ mod tests {
     fn token_new_works() {
         assert_eq!(
             Token::new(
+                "foo.s".to_string(), 
                 Span::new(4, 8),
                 42,
                 24,
@@ -537,6 +543,7 @@ mod tests {
                 TokenKind::Int("42".to_string())
             ),
             Token {
+                file: "foo.s".to_string(),
                 span: Span { start: 4, end: 8 },
                 line: 42,
                 column: 24,
