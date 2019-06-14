@@ -51,13 +51,12 @@ pub enum TokenKind {
     HighByte,
     LowByte,
 
+    End,
     Macro,
-    EndMacro,
-    MacroParameter(String),
+    Variable(String),
     If,
     Elif,
     Else,
-    Endif,
     For,
 
     Eq,
@@ -72,6 +71,20 @@ pub enum TokenKind {
     BitwiseNot,
     BitwiseAnd,
     BitwiseOr,
+    
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    Pow,
+
+    Lparen,
+    Rparen,
+    Lbrack,
+    Rbrack,
+
+    Pound,
 
     Label(String),
     Ident(String),
@@ -285,12 +298,11 @@ impl Lexer {
                     ".reset" => self.emit(TokenKind::ResetVector),
                     ".irq" => self.emit(TokenKind::IrqVector),
                     ".nmi" => self.emit(TokenKind::NmiVector),
+                    ".end" => self.emit(TokenKind::End),
                     ".macro" => self.emit(TokenKind::Macro),
-                    ".endmacro" => self.emit(TokenKind::EndMacro),
                     ".if" => self.emit(TokenKind::If),
                     ".elif" => self.emit(TokenKind::Elif),
                     ".else" => self.emit(TokenKind::Else),
-                    ".endif" => self.emit(TokenKind::Endif),
                     ".for" => self.emit(TokenKind::For),
                     _ => return Err(format!("Unexpected directive: {}", curr)),
                 }
@@ -324,6 +336,22 @@ impl Lexer {
                     self.emit(TokenKind::BitwiseOr);
                 }
             }
+            '+' => self.emit(TokenKind::Add),
+            '-' => self.emit(TokenKind::Sub),
+            '*' => {
+                if self.accept("*") {
+                    self.emit(TokenKind::Pow);
+                } else {
+                    self.emit(TokenKind::Mul);
+                }
+            }
+            '/' => self.emit(TokenKind::Div),
+            '%' => self.emit(TokenKind::Mod),
+            '(' => self.emit(TokenKind::Lparen),
+            ')' => self.emit(TokenKind::Rparen),
+            '[' => self.emit(TokenKind::Lbrack),
+            ']' => self.emit(TokenKind::Rbrack),
+            '#' => self.emit(TokenKind::Pound),
             '<' => {
                 if self.accept("=") {
                     self.emit(TokenKind::Lte);
@@ -350,7 +378,7 @@ impl Lexer {
             '$' => {
                 self.accept_run("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_");
                 self.accept_run("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789");
-                self.emit(TokenKind::MacroParameter(self.current()[1..].to_string()));
+                self.emit(TokenKind::Variable(self.current()[1..].to_string()));
             }
             '\'' => {
                 let result;
