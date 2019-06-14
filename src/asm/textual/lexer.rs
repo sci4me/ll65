@@ -47,6 +47,10 @@ pub enum TokenKind {
     Macro,
     EndMacro,
     MacroParameter(String),
+    If,
+    Elif,
+    Else,
+    Endif,
 
     Label(String),
     Ident(String),
@@ -258,6 +262,10 @@ impl Lexer {
                     ".nmi" => self.emit(TokenKind::NmiVector),
                     ".macro" => self.emit(TokenKind::Macro),
                     ".endmacro" => self.emit(TokenKind::EndMacro),
+                    ".if" => self.emit(TokenKind::If),
+                    ".elif" => self.emit(TokenKind::Elif),
+                    ".else" => self.emit(TokenKind::Else),
+                    ".endif" => self.emit(TokenKind::Endif),
                     _ => return Err(format!("Unexpected directive: {}", curr)),
                 }
             }
