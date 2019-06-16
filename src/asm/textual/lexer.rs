@@ -286,7 +286,7 @@ impl fmt::Display for TokenKind {
             TokenKind::Ply => write!(f, "Ply"),
             TokenKind::Wai => write!(f, "Wai"),
             TokenKind::Stp => write!(f, "Stp"),
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }
@@ -408,7 +408,7 @@ impl TokenKind {
             TokenKind::Ply => "Ply",
             TokenKind::Wai => "Wai",
             TokenKind::Stp => "Stp",
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }
@@ -555,7 +555,11 @@ impl Lexer {
                     ".for" => self.emit(TokenKind::For),
                     ".byte" => self.emit(TokenKind::Byte),
                     ".word" => self.emit(TokenKind::Word),
-                    _ => return Err(self.format_error_message(format!("Unexpected directive: {}", curr))),
+                    _ => {
+                        return Err(
+                            self.format_error_message(format!("Unexpected directive: {}", curr))
+                        )
+                    }
                 }
             }
             '=' => {
@@ -646,7 +650,10 @@ impl Lexer {
                     } else if self.accept("n") {
                         result = TokenKind::Char('\n');
                     } else {
-                        return Err(self.format_error_message(format!("Unexpected escape character: {}", self.peek())));
+                        return Err(self.format_error_message(format!(
+                            "Unexpected escape character: {}",
+                            self.peek()
+                        )));
                     }
                 } else if self.more() {
                     result = TokenKind::Char(self.next());
@@ -678,7 +685,9 @@ impl Lexer {
                     let s = self.current();
 
                     if s.len() == 2 {
-                        return Err(self.format_error_message(String::from("Incomplete hex literal")));
+                        return Err(
+                            self.format_error_message(String::from("Incomplete hex literal"))
+                        );
                     }
 
                     self.emit(TokenKind::Int(s[2..].to_string()));
@@ -689,7 +698,9 @@ impl Lexer {
                     let s = self.current();
 
                     if s.len() == 2 {
-                        return Err(self.format_error_message(String::from("Incomplete binary literal")));
+                        return Err(
+                            self.format_error_message(String::from("Incomplete binary literal"))
+                        );
                     }
 
                     self.emit(TokenKind::Int(s[2..].to_string()));

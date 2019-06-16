@@ -111,15 +111,21 @@ impl Parser {
 
     fn parse_ident(&mut self) -> Result<NodeKind, String> {
         match self.current().kind {
-            TokenKind::Ident(v) => Ok(NodeKind::Ident(IdentNode { value: v })),
-            _ => Err("TODO".to_string()),
+            TokenKind::Ident(v) => {
+                self.next()?;
+                Ok(NodeKind::Ident(IdentNode { value: v }))
+            }
+            _ => Err(self.unexpected_token_error(&vec![TokenKind::Ident("".to_string())])),
         }
     }
 
     fn parse_int(&mut self, max: usize) -> Result<usize, String> {
         match self.current().kind {
-            TokenKind::Int(v) => v.parse::<usize>().map_err(|_| "TODO".to_string()),
-            _ => Err("TODO".to_string()),
+            TokenKind::Int(v) => {
+                self.next()?;
+                v.parse::<usize>().map_err(|_| "TODO".to_string())
+            }
+            _ => Err(self.unexpected_token_error(&vec![TokenKind::Int("".to_string())])),
         }
     }
 
@@ -145,20 +151,35 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Result<NodeKind, String> {
+    fn parse_reset_vector(&mut self) -> Result<NodeKind, String> {
+        self.expect_next(&vec![TokenKind::ResetVector])?;
+        Ok(NodeKind::ResetVector(ResetVectorNode {
+            value: Box::new(self.parse_address()?),
+        }))
+    }
+
+    fn parse_irq_vector(&mut self) -> Result<NodeKind, String> {
+        self.expect_next(&vec![TokenKind::IrqVector])?;
+        Ok(NodeKind::IrqVector(IrqVectorNode {
+            value: Box::new(self.parse_address()?),
+        }))
+    }
+
+    fn parse_nmi_vector(&mut self) -> Result<NodeKind, String> {
+        self.expect_next(&vec![TokenKind::NmiVector])?;
+        Ok(NodeKind::NmiVector(NmiVectorNode {
+            value: Box::new(self.parse_address()?),
+        }))
+    }
+
+    fn parse_top_level(&mut self) -> Result<NodeKind, String> {
         let current = self.current();
         match current.kind {
             TokenKind::Label(v) => Ok(NodeKind::Label(LabelNode { value: v })),
             TokenKind::Ident(v) => Ok(NodeKind::Ident(IdentNode { value: v })),
-            TokenKind::ResetVector => Ok(NodeKind::ResetVector(ResetVectorNode {
-                value: Box::new(self.parse_address()?),
-            })),
-            TokenKind::IrqVector => Ok(NodeKind::IrqVector(IrqVectorNode {
-                value: Box::new(self.parse_address()?),
-            })),
-            TokenKind::NmiVector => Ok(NodeKind::NmiVector(NmiVectorNode {
-                value: Box::new(self.parse_address()?),
-            })),
+            TokenKind::ResetVector => self.parse_reset_vector(),
+            TokenKind::IrqVector => self.parse_irq_vector(),
+            TokenKind::NmiVector => self.parse_nmi_vector(),
             TokenKind::Macro => unimplemented!(),
             TokenKind::Byte => unimplemented!(),
             TokenKind::Word => unimplemented!(),
@@ -245,5 +266,13 @@ impl Parser {
                 Err("TODO".to_string())
             }
         }
+    }
+
+    pub fn parse(&mut self) -> Result<Vec<NodeKind>, String> {
+        let mut result = Vec::new();
+        while self.more() {
+            result.push(self.parse_top_level()?);
+        }
+        Ok(result)
     }
 }
