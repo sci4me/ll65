@@ -26,6 +26,7 @@
 //      ZPX:  zero-page,X, add next byte to X modulo 0xFF and use that as a
 //            memory address
 
+#[derive(Debug)]
 #[allow(non_camel_case_types)]
 pub enum OpCode {
     ADC_AB = 0x6D,

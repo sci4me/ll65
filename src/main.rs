@@ -3,6 +3,7 @@ use std::fs;
 use std::process;
 
 use ll65::asm::textual::lexer::Lexer;
+use ll65::asm::textual::parser::Parser;
 
 fn main() {
     let matches = App::new(crate_name!())
@@ -28,23 +29,27 @@ fn main() {
         }
     };
 
-    let mut lexer = Lexer::new(file.to_string(), contents).unwrap();
+    let lexer = Lexer::new(file.to_string(), contents).unwrap();
+    let mut parser = Parser::new(lexer);
+    let ast = parser.parse();
 
-    while lexer.has_token() {
-        // println!(
-        // "{:?}\n{:?}",
-        // lexer.get_token(),
-        // lexer.get_line(lexer.get_token().span.start)
-        // );
-        println!("{:?}", lexer.get_token());
-        // println!("{:?}", lexer.get_line(lexer.get_token().span.start));
+    println!("{:?}", ast);
 
-        match lexer.eat_token() {
-            Ok(_) => {}
-            Err(e) => {
-                eprintln!("{}", lexer.format_error_message(e));
-                std::process::exit(1);
-            }
-        }
-    }
+    // while lexer.has_token() {
+    //     // println!(
+    //     // "{:?}\n{:?}",
+    //     // lexer.get_token(),
+    //     // lexer.get_line(lexer.get_token().span.start)
+    //     // );
+    //     println!("{:?}", lexer.get_token());
+    //     // println!("{:?}", lexer.get_line(lexer.get_token().span.start));
+
+    //     match lexer.eat_token() {
+    //         Ok(_) => {}
+    //         Err(e) => {
+    //             eprintln!("{}", lexer.format_error_message(e));
+    //             std::process::exit(1);
+    //         }
+    //     }
+    // }
 }

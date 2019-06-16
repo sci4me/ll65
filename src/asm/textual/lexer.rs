@@ -567,6 +567,10 @@ impl Lexer {
         Ok(())
     }
 
+    pub fn file(&self) -> &str {
+        &self.file
+    }
+
     pub fn line(&self) -> u32 {
         self.line
     }
