@@ -90,6 +90,7 @@ pub enum TokenKind {
 
     Pound,
     Colon,
+    Comma,
 
     Label(String),
     Ident(String),
@@ -211,6 +212,7 @@ impl fmt::Display for TokenKind {
             TokenKind::Rbrack => write!(f, "Rbrack"),
             TokenKind::Pound => write!(f, "Pound"),
             TokenKind::Colon => write!(f, "Colon"),
+            TokenKind::Comma => write!(f, "Comma"),
             TokenKind::Label(v) => write!(f, "Label({})", v),
             TokenKind::Ident(v) => write!(f, "Ident({})", v),
             TokenKind::Int(v) => write!(f, "Int({})", v),
@@ -333,6 +335,7 @@ impl TokenKind {
             TokenKind::Rbrack => "Rbrack",
             TokenKind::Pound => "Pound",
             TokenKind::Colon => "Colon",
+            TokenKind::Comma => "Comma",
             TokenKind::Label(_) => "Label",
             TokenKind::Ident(_) => "Ident",
             TokenKind::Int(_) => "Int",
@@ -609,6 +612,7 @@ impl Lexer {
             ']' => self.emit(TokenKind::Rbrack),
             '#' => self.emit(TokenKind::Pound),
             ':' => self.emit(TokenKind::Colon),
+            ',' => self.emit(TokenKind::Comma),
             '<' => {
                 if self.accept("=") {
                     self.emit(TokenKind::Lte);

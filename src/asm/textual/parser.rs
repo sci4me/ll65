@@ -38,8 +38,7 @@ impl Parser {
     }
 
     fn unexpected_token_error(&self, valid: &Vec<TokenKind>) -> String {
-        let mut result = String::new();
-        let error = format!(
+        self.format_error(format!(
             "Unexpected token: {}, expected: {}",
             self.current().kind,
             valid
@@ -47,7 +46,11 @@ impl Parser {
                 .map(|t| format!("{}", t.name()))
                 .collect::<Vec<String>>()
                 .join(", ")
-        );
+        ))
+    }
+
+    fn format_error(&self, error: String) -> String {
+        let mut result = String::new();
         result.push_str(&format!(
             "\u{001b}[31m\u{001b}[1merror:\u{001b}[37m {}\u{001b}[0m\n",
             error
@@ -109,6 +112,16 @@ impl Parser {
         Ok(())
     }
 
+    fn parse_label(&mut self) -> Result<NodeKind, String> {
+        match self.current().kind {
+            TokenKind::Label(v) => {
+                self.next()?;
+                Ok(NodeKind::Label(LabelNode { value: v }))
+            },
+            _ => Err(self.unexpected_token_error(&vec![TokenKind::Label("".to_string())]))
+        }
+    }
+
     fn parse_ident(&mut self) -> Result<NodeKind, String> {
         match self.current().kind {
             TokenKind::Ident(v) => {
@@ -123,7 +136,7 @@ impl Parser {
         match self.current().kind {
             TokenKind::Int(v) => {
                 self.next()?;
-                v.parse::<usize>().map_err(|_| "TODO".to_string())
+                v.parse::<usize>().map_err(|_| self.format_error("Failed to parse int".to_string()))
             }
             _ => Err(self.unexpected_token_error(&vec![TokenKind::Int("".to_string())])),
         }
@@ -172,26 +185,56 @@ impl Parser {
         }))
     }
 
-    fn parse_top_level(&mut self) -> Result<NodeKind, String> {
+    fn parse_macro(&mut self) -> Result<NodeKind, String> {
+        self.expect_next(&vec![TokenKind::Macro])?;
+
+        let name = match self.current().kind {
+            TokenKind::Ident(v) => {
+                self.next()?;
+                v
+            },
+            _ => return Err(self.unexpected_token_error(&vec![TokenKind::Ident("".to_string())]))
+        };
+
+        let mut parameters = Vec::new();
+        while self.more() {
+            match self.current().kind {
+                TokenKind::Variable(v) => parameters.push(v),
+                _ => break
+            }
+        }
+
+        let mut body = Vec::new();
+        while self.more() && !self.accept(&vec![TokenKind::End]) {
+            body.push(Box::new(self.parse_mid_level()?));
+        }
+        self.expect_next(&vec![TokenKind::End])?;
+
+        Ok(NodeKind::Macro(MacroNode {
+            name,
+            parameters,
+            body
+        }))
+    }
+
+    fn parse_mid_level(&mut self) -> Result<NodeKind, String> {
         let current = self.current();
         match current.kind {
-            TokenKind::Label(v) => Ok(NodeKind::Label(LabelNode { value: v })),
-            TokenKind::Ident(v) => Ok(NodeKind::Ident(IdentNode { value: v })),
-            TokenKind::ResetVector => self.parse_reset_vector(),
-            TokenKind::IrqVector => self.parse_irq_vector(),
-            TokenKind::NmiVector => self.parse_nmi_vector(),
-            TokenKind::Macro => unimplemented!(),
+            TokenKind::Label(_) => self.parse_label(),
+            TokenKind::Ident(_) => self.parse_ident(),
+            TokenKind::If => unimplemented!(),
+            TokenKind::Elif => unimplemented!(),
+            TokenKind::Else => unimplemented!(),
+            TokenKind::For => unimplemented!(),
             TokenKind::Byte => unimplemented!(),
             TokenKind::Word => unimplemented!(),
+            TokenKind::Adc => {
+                self.expect(&vec![TokenKind::Ident("".to_string()), TokenKind::Int("".to_string()), TokenKind::Lbrack])?;
+
+                Err("todo".to_string())
+            },
             _ => {
                 self.expect(&vec![
-                    TokenKind::ResetVector,
-                    TokenKind::IrqVector,
-                    TokenKind::NmiVector,
-                    TokenKind::Macro,
-                    TokenKind::Byte,
-                    TokenKind::Word,
-                    TokenKind::Adc,
                     TokenKind::And,
                     TokenKind::Asl,
                     TokenKind::Bcc,
@@ -262,9 +305,21 @@ impl Parser {
                     TokenKind::Wai,
                     TokenKind::Stp,
                 ])?;
+                self.next()?;
 
                 Err("TODO".to_string())
             }
+        }
+    }
+
+    fn parse_top_level(&mut self) -> Result<NodeKind, String> {
+        let current = self.current();
+        match current.kind {
+            TokenKind::ResetVector => self.parse_reset_vector(),
+            TokenKind::IrqVector => self.parse_irq_vector(),
+            TokenKind::NmiVector => self.parse_nmi_vector(),
+            TokenKind::Macro => self.parse_macro(),
+            _ => self.parse_mid_level()
         }
     }
 
