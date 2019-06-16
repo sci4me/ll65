@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Span {
@@ -168,6 +169,250 @@ pub enum TokenKind {
     Stp,
 }
 
+impl fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TokenKind::ResetVector => write!(f, "ResetVector"),
+            TokenKind::IrqVector => write!(f, "IrqVector"),
+            TokenKind::NmiVector => write!(f, "NmiVecor"),
+            TokenKind::HighByte => write!(f, "HighByte"),
+            TokenKind::LowByte => write!(f, "LowByte"),
+            TokenKind::End => write!(f, "End"),
+            TokenKind::Variable(v) => write!(f, "Variable({})", v),
+            TokenKind::Macro => write!(f, "Macro"),
+            TokenKind::If => write!(f, "If"),
+            TokenKind::Elif => write!(f, "Elif"),
+            TokenKind::Else => write!(f, "Else"),
+            TokenKind::For => write!(f, "For"),
+            TokenKind::Byte => write!(f, "Byte"),
+            TokenKind::Word => write!(f, "Word"),
+            TokenKind::Eq => write!(f, "Eq"),
+            TokenKind::Ne => write!(f, "Ne"),
+            TokenKind::Lt => write!(f, "Lt"),
+            TokenKind::Gt => write!(f, "Gt"),
+            TokenKind::Lte => write!(f, "Lte"),
+            TokenKind::Gte => write!(f, "Gte"),
+            TokenKind::BooleanNot => write!(f, "BooleanNot"),
+            TokenKind::BooleanAnd => write!(f, "BooleanAnd"),
+            TokenKind::BooleanOr => write!(f, "BooleanOr"),
+            TokenKind::BitwiseNot => write!(f, "BitwiseNot"),
+            TokenKind::BitwiseAnd => write!(f, "BitwiseAnd"),
+            TokenKind::BitwiseOr => write!(f, "BitwiseOr"),
+            TokenKind::BitwiseXor => write!(f, "BitwiseXor"),
+            TokenKind::Add => write!(f, "Add"),
+            TokenKind::Sub => write!(f, "Sub"),
+            TokenKind::Mul => write!(f, "Mul"),
+            TokenKind::Div => write!(f, "Div"),
+            TokenKind::Mod => write!(f, "Mod"),
+            TokenKind::Pow => write!(f, "Pow"),
+            TokenKind::Lparen => write!(f, "Lparen"),
+            TokenKind::Rparen => write!(f, "Rparen"),
+            TokenKind::Lbrack => write!(f, "Lbrack"),
+            TokenKind::Rbrack => write!(f, "Rbrack"),
+            TokenKind::Pound => write!(f, "Pound"),
+            TokenKind::Colon => write!(f, "Colon"),
+            TokenKind::Label(v) => write!(f, "Label({})", v),
+            TokenKind::Ident(v) => write!(f, "Ident({})", v),
+            TokenKind::Int(v) => write!(f, "Int({})", v),
+            TokenKind::Char(v) => write!(f, "Char({})", v),
+            TokenKind::Str(v) => write!(f, "Str({})", v),
+            TokenKind::Adc => write!(f, "Adc"),
+            TokenKind::And => write!(f, "And"),
+            TokenKind::Asl => write!(f, "Asl"),
+            TokenKind::Bcc => write!(f, "Bcc"),
+            TokenKind::Bcs => write!(f, "Bcs"),
+            TokenKind::Beq => write!(f, "Beq"),
+            TokenKind::Bit => write!(f, "Bit"),
+            TokenKind::Bmi => write!(f, "Bmi"),
+            TokenKind::Bne => write!(f, "Bne"),
+            TokenKind::Bpl => write!(f, "Bpl"),
+            TokenKind::Brk => write!(f, "Brk"),
+            TokenKind::Bvc => write!(f, "Bvc"),
+            TokenKind::Bvs => write!(f, "Bvs"),
+            TokenKind::Clc => write!(f, "Clc"),
+            TokenKind::Cld => write!(f, "Cld"),
+            TokenKind::Cli => write!(f, "Cli"),
+            TokenKind::Clv => write!(f, "Clv"),
+            TokenKind::Cmp => write!(f, "Cmp"),
+            TokenKind::Cpx => write!(f, "Cpx"),
+            TokenKind::Cpy => write!(f, "Cpy"),
+            TokenKind::Dec => write!(f, "Dec"),
+            TokenKind::Dex => write!(f, "Dex"),
+            TokenKind::Dey => write!(f, "Dey"),
+            TokenKind::Eor => write!(f, "Eor"),
+            TokenKind::Inc => write!(f, "Inc"),
+            TokenKind::Inx => write!(f, "Inx"),
+            TokenKind::Iny => write!(f, "Iny"),
+            TokenKind::Jmp => write!(f, "Jmp"),
+            TokenKind::Jsr => write!(f, "Jsr"),
+            TokenKind::Lda => write!(f, "Lda"),
+            TokenKind::Ldx => write!(f, "Ldx"),
+            TokenKind::Ldy => write!(f, "Ldy"),
+            TokenKind::Lsr => write!(f, "Lsr"),
+            TokenKind::Ora => write!(f, "Ora"),
+            TokenKind::Nop => write!(f, "Nop"),
+            TokenKind::Pha => write!(f, "Pha"),
+            TokenKind::Php => write!(f, "Php"),
+            TokenKind::Pla => write!(f, "Pla"),
+            TokenKind::Plp => write!(f, "Plp"),
+            TokenKind::Rol => write!(f, "Rol"),
+            TokenKind::Ror => write!(f, "Ror"),
+            TokenKind::Rti => write!(f, "Rti"),
+            TokenKind::Rts => write!(f, "Rts"),
+            TokenKind::Sbc => write!(f, "Sbc"),
+            TokenKind::Sec => write!(f, "Sec"),
+            TokenKind::Sed => write!(f, "Sed"),
+            TokenKind::Sei => write!(f, "Sei"),
+            TokenKind::Sta => write!(f, "Sta"),
+            TokenKind::Stx => write!(f, "Stx"),
+            TokenKind::Sty => write!(f, "Sty"),
+            TokenKind::Tax => write!(f, "Tax"),
+            TokenKind::Tay => write!(f, "Tay"),
+            TokenKind::Tsx => write!(f, "Tsx"),
+            TokenKind::Txa => write!(f, "Txa"),
+            TokenKind::Txs => write!(f, "Txs"),
+            TokenKind::Tya => write!(f, "Tya"),
+            TokenKind::Bra => write!(f, "Bra"),
+            TokenKind::Bbr => write!(f, "Bbr"),
+            TokenKind::Bbs => write!(f, "Bbs"),
+            TokenKind::Rmb => write!(f, "Rmb"),
+            TokenKind::Smb => write!(f, "Smb"),
+            TokenKind::Trb => write!(f, "Trb"),
+            TokenKind::Tsb => write!(f, "Tsb"),
+            TokenKind::Stz => write!(f, "Stz"),
+            TokenKind::Phx => write!(f, "Phx"),
+            TokenKind::Phy => write!(f, "Phy"),
+            TokenKind::Plx => write!(f, "Plx"),
+            TokenKind::Ply => write!(f, "Ply"),
+            TokenKind::Wai => write!(f, "Wai"),
+            TokenKind::Stp => write!(f, "Stp"),
+            _ => unreachable!()
+        }
+    }
+}
+
+impl TokenKind {
+    pub fn name(&self) -> &str {
+        match self {
+            TokenKind::ResetVector => "ResetVector",
+            TokenKind::IrqVector => "IrqVector",
+            TokenKind::NmiVector => "NmiVecor",
+            TokenKind::HighByte => "HighByte",
+            TokenKind::LowByte => "LowByte",
+            TokenKind::End => "End",
+            TokenKind::Variable(_) => "Variable",
+            TokenKind::Macro => "Macro",
+            TokenKind::If => "If",
+            TokenKind::Elif => "Elif",
+            TokenKind::Else => "Else",
+            TokenKind::For => "For",
+            TokenKind::Byte => "Byte",
+            TokenKind::Word => "Word",
+            TokenKind::Eq => "Eq",
+            TokenKind::Ne => "Ne",
+            TokenKind::Lt => "Lt",
+            TokenKind::Gt => "Gt",
+            TokenKind::Lte => "Lte",
+            TokenKind::Gte => "Gte",
+            TokenKind::BooleanNot => "BooleanNot",
+            TokenKind::BooleanAnd => "BooleanAnd",
+            TokenKind::BooleanOr => "BooleanOr",
+            TokenKind::BitwiseNot => "BitwiseNot",
+            TokenKind::BitwiseAnd => "BitwiseAnd",
+            TokenKind::BitwiseOr => "BitwiseOr",
+            TokenKind::BitwiseXor => "BitwiseXor",
+            TokenKind::Add => "Add",
+            TokenKind::Sub => "Sub",
+            TokenKind::Mul => "Mul",
+            TokenKind::Div => "Div",
+            TokenKind::Mod => "Mod",
+            TokenKind::Pow => "Pow",
+            TokenKind::Lparen => "Lparen",
+            TokenKind::Rparen => "Rparen",
+            TokenKind::Lbrack => "Lbrack",
+            TokenKind::Rbrack => "Rbrack",
+            TokenKind::Pound => "Pound",
+            TokenKind::Colon => "Colon",
+            TokenKind::Label(_) => "Label",
+            TokenKind::Ident(_) => "Ident",
+            TokenKind::Int(_) => "Int",
+            TokenKind::Char(_) => "Char",
+            TokenKind::Str(_) => "Str",
+            TokenKind::Adc => "Adc",
+            TokenKind::And => "And",
+            TokenKind::Asl => "Asl",
+            TokenKind::Bcc => "Bcc",
+            TokenKind::Bcs => "Bcs",
+            TokenKind::Beq => "Beq",
+            TokenKind::Bit => "Bit",
+            TokenKind::Bmi => "Bmi",
+            TokenKind::Bne => "Bne",
+            TokenKind::Bpl => "Bpl",
+            TokenKind::Brk => "Brk",
+            TokenKind::Bvc => "Bvc",
+            TokenKind::Bvs => "Bvs",
+            TokenKind::Clc => "Clc",
+            TokenKind::Cld => "Cld",
+            TokenKind::Cli => "Cli",
+            TokenKind::Clv => "Clv",
+            TokenKind::Cmp => "Cmp",
+            TokenKind::Cpx => "Cpx",
+            TokenKind::Cpy => "Cpy",
+            TokenKind::Dec => "Dec",
+            TokenKind::Dex => "Dex",
+            TokenKind::Dey => "Dey",
+            TokenKind::Eor => "Eor",
+            TokenKind::Inc => "Inc",
+            TokenKind::Inx => "Inx",
+            TokenKind::Iny => "Iny",
+            TokenKind::Jmp => "Jmp",
+            TokenKind::Jsr => "Jsr",
+            TokenKind::Lda => "Lda",
+            TokenKind::Ldx => "Ldx",
+            TokenKind::Ldy => "Ldy",
+            TokenKind::Lsr => "Lsr",
+            TokenKind::Ora => "Ora",
+            TokenKind::Nop => "Nop",
+            TokenKind::Pha => "Pha",
+            TokenKind::Php => "Php",
+            TokenKind::Pla => "Pla",
+            TokenKind::Plp => "Plp",
+            TokenKind::Rol => "Rol",
+            TokenKind::Ror => "Ror",
+            TokenKind::Rti => "Rti",
+            TokenKind::Rts => "Rts",
+            TokenKind::Sbc => "Sbc",
+            TokenKind::Sec => "Sec",
+            TokenKind::Sed => "Sed",
+            TokenKind::Sei => "Sei",
+            TokenKind::Sta => "Sta",
+            TokenKind::Stx => "Stx",
+            TokenKind::Sty => "Sty",
+            TokenKind::Tax => "Tax",
+            TokenKind::Tay => "Tay",
+            TokenKind::Tsx => "Tsx",
+            TokenKind::Txa => "Txa",
+            TokenKind::Txs => "Txs",
+            TokenKind::Tya => "Tya",
+            TokenKind::Bra => "Bra",
+            TokenKind::Bbr => "Bbr",
+            TokenKind::Bbs => "Bbs",
+            TokenKind::Rmb => "Rmb",
+            TokenKind::Smb => "Smb",
+            TokenKind::Trb => "Trb",
+            TokenKind::Tsb => "Tsb",
+            TokenKind::Stz => "Stz",
+            TokenKind::Phx => "Phx",
+            TokenKind::Phy => "Phy",
+            TokenKind::Plx => "Plx",
+            TokenKind::Ply => "Ply",
+            TokenKind::Wai => "Wai",
+            TokenKind::Stp => "Stp",
+            _ => unreachable!()
+        }
+    }
+}
+
 pub struct Lexer {
     file: String,
     source: Vec<char>,
@@ -310,7 +555,7 @@ impl Lexer {
                     ".for" => self.emit(TokenKind::For),
                     ".byte" => self.emit(TokenKind::Byte),
                     ".word" => self.emit(TokenKind::Word),
-                    _ => return Err(format!("Unexpected directive: {}", curr)),
+                    _ => return Err(self.format_error_message(format!("Unexpected directive: {}", curr))),
                 }
             }
             '=' => {
@@ -401,18 +646,18 @@ impl Lexer {
                     } else if self.accept("n") {
                         result = TokenKind::Char('\n');
                     } else {
-                        return Err(format!("Unexpected escape character: {}", self.peek()));
+                        return Err(self.format_error_message(format!("Unexpected escape character: {}", self.peek())));
                     }
                 } else if self.more() {
                     result = TokenKind::Char(self.next());
                 } else {
-                    return Err(String::from("Unclosed character"));
+                    return Err(self.format_error_message(String::from("Unclosed character")));
                 }
 
                 if self.accept("'") {
                     self.emit(result);
                 } else {
-                    return Err(String::from("Unclosed character"));
+                    return Err(self.format_error_message(String::from("Unclosed character")));
                 }
             }
             '"' => {
@@ -433,7 +678,7 @@ impl Lexer {
                     let s = self.current();
 
                     if s.len() == 2 {
-                        return Err(String::from("Incomplete hex literal"));
+                        return Err(self.format_error_message(String::from("Incomplete hex literal")));
                     }
 
                     self.emit(TokenKind::Int(s[2..].to_string()));
@@ -444,7 +689,7 @@ impl Lexer {
                     let s = self.current();
 
                     if s.len() == 2 {
-                        return Err(String::from("Incomplete binary literal"));
+                        return Err(self.format_error_message(String::from("Incomplete binary literal")));
                     }
 
                     self.emit(TokenKind::Int(s[2..].to_string()));
@@ -536,7 +781,7 @@ impl Lexer {
                         }
                     }
                 } else {
-                    return Err(format!("Unexpected character: '{}'", c));
+                    return Err(self.format_error_message(format!("Unexpected character: '{}'", c)));
                 }
             }
         }
@@ -647,7 +892,7 @@ impl Lexer {
         result
     }
 
-    pub fn format_error_message(&self, error: String) -> String {
+    fn format_error_message(&self, error: String) -> String {
         let mut result = String::new();
         result.push_str(&format!(
             "\u{001b}[31m\u{001b}[1merror:\u{001b}[37m {}\u{001b}[0m\n",

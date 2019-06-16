@@ -31,9 +31,14 @@ fn main() {
 
     let lexer = Lexer::new(file.to_string(), contents).unwrap();
     let mut parser = Parser::new(lexer);
-    let ast = parser.parse();
 
-    println!("{:?}", ast);
+    let ast = match parser.parse() {
+        Ok(ast) => ast,
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+    };
 
     // while lexer.has_token() {
     //     // println!(

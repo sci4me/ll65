@@ -40,11 +40,11 @@ impl Parser {
     fn unexpected_token_error(&self, valid: &Vec<TokenKind>) -> String {
         let mut result = String::new();
         let error = format!(
-            "Unexpected token: {:?}, expected: {}",
+            "Unexpected token: {}, expected: {}",
             self.current().kind,
             valid
                 .iter()
-                .map(|t| format!("{:?}", t))
+                .map(|t| format!("{}", t.name()))
                 .collect::<Vec<String>>()
                 .join(", ")
         );
@@ -80,7 +80,7 @@ impl Parser {
                     );
                 } else if result.is_empty() {
                     result = format!(
-                        " \u{001b}[34;1m{} |\u{001b}[0m {}",
+                        "  \u{001b}[34;1m{} |\u{001b}[0m {}",
                         curr.0,
                         self.lexer.get_line(curr.1)
                     );
@@ -111,40 +111,37 @@ impl Parser {
 
     fn parse_ident(&mut self) -> Result<NodeKind, String> {
         match self.current().kind {
-            TokenKind::Ident(v) => Ok(NodeKind::Ident(IdentNode {
-                value: v
-            })),
-            _ => Err("TODO".to_string()) 
+            TokenKind::Ident(v) => Ok(NodeKind::Ident(IdentNode { value: v })),
+            _ => Err("TODO".to_string()),
         }
     }
 
     fn parse_int(&mut self, max: usize) -> Result<usize, String> {
         match self.current().kind {
-            TokenKind::Int(v) => {
-                v.parse::<usize>().map_err(|_| "TODO".to_string())
-            },
-            _ => Err("TODO".to_string())
+            TokenKind::Int(v) => v.parse::<usize>().map_err(|_| "TODO".to_string()),
+            _ => Err("TODO".to_string()),
         }
     }
 
     fn parse_byte(&mut self) -> Result<NodeKind, String> {
-        self.parse_int(255).map(|x| NodeKind::Byte(ByteNode {
-            value: x as u8
-        }))
+        self.parse_int(255)
+            .map(|x| NodeKind::Byte(ByteNode { value: x as u8 }))
     }
 
     fn parse_word(&mut self) -> Result<NodeKind, String> {
-        self.parse_int(65535).map(|x| NodeKind::Byte(ByteNode {
-            value: x as u8
-        }))
+        self.parse_int(65535)
+            .map(|x| NodeKind::Byte(ByteNode { value: x as u8 }))
     }
 
     fn parse_address(&mut self) -> Result<NodeKind, String> {
         let current = self.current();
         match current.kind {
-            TokenKind::Int(v) => self.parse_word(),
-            TokenKind::Ident(v) => self.parse_ident(),
-            _ => Err("TODO".to_string())
+            TokenKind::Int(_) => self.parse_word(),
+            TokenKind::Ident(_) => self.parse_ident(),
+            _ => Err(self.unexpected_token_error(&vec![
+                TokenKind::Int("".to_string()),
+                TokenKind::Ident("".to_string()),
+            ])),
         }
     }
 
@@ -153,24 +150,18 @@ impl Parser {
         match current.kind {
             TokenKind::Label(v) => Ok(NodeKind::Label(LabelNode { value: v })),
             TokenKind::Ident(v) => Ok(NodeKind::Ident(IdentNode { value: v })),
-            TokenKind::ResetVector => {
-                Ok(NodeKind::ResetVector(ResetVectorNode {
-                    value: Box::new(self.parse_address()?)
-                }))
-            },
-            TokenKind::IrqVector => {
-                Ok(NodeKind::IrqVector(IrqVectorNode {
-                    value: Box::new(self.parse_address()?)
-                }))
-            },
-            TokenKind::NmiVector => {
-                Ok(NodeKind::NmiVector(NmiVectorNode {
-                    value: Box::new(self.parse_address()?)
-                }))
-            },
+            TokenKind::ResetVector => Ok(NodeKind::ResetVector(ResetVectorNode {
+                value: Box::new(self.parse_address()?),
+            })),
+            TokenKind::IrqVector => Ok(NodeKind::IrqVector(IrqVectorNode {
+                value: Box::new(self.parse_address()?),
+            })),
+            TokenKind::NmiVector => Ok(NodeKind::NmiVector(NmiVectorNode {
+                value: Box::new(self.parse_address()?),
+            })),
             TokenKind::Macro => unimplemented!(),
             TokenKind::Byte => unimplemented!(),
-            TokenKind::Word => unimplemented!(),    
+            TokenKind::Word => unimplemented!(),
             _ => {
                 self.expect(&vec![
                     TokenKind::ResetVector,
