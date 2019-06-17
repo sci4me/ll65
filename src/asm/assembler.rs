@@ -11,7 +11,7 @@ pub enum MemoryType {
     RAM,
     ROM,
     IO,
-    NONE
+    NONE,
 }
 
 impl fmt::Display for MemoryType {
@@ -20,7 +20,7 @@ impl fmt::Display for MemoryType {
             MemoryType::RAM => write!(f, "RAM"),
             MemoryType::ROM => write!(f, "ROM"),
             MemoryType::IO => write!(f, "IO"),
-            MemoryType::NONE => write!(f, "NONE")
+            MemoryType::NONE => write!(f, "NONE"),
         }
     }
 }
@@ -255,7 +255,7 @@ pub struct Assembler {
     patch_locations: HashMap<Ref, Vec<u16>>,
     relative_patch_locations: HashMap<Ref, Vec<u16>>,
     label_locations: HashMap<Ref, u16>,
-    memory_layout: RangeMap<u16, MemoryType>
+    memory_layout: RangeMap<u16, MemoryType>,
 }
 
 impl Assembler {
@@ -266,7 +266,7 @@ impl Assembler {
             patch_locations: HashMap::new(),
             relative_patch_locations: HashMap::new(),
             label_locations: HashMap::new(),
-            memory_layout: RangeMap::new()
+            memory_layout: RangeMap::new(),
         };
         result.build_default_memory_layout();
         result
@@ -277,26 +277,34 @@ impl Assembler {
         self.memory_layout.insert(0..end, MemoryType::ROM);
     }
 
-    fn check_memory_type(&self, address: u16, expected: MemoryType) -> Result<(), String> {
+    fn check_memory_type(&self, address: u16, expected: Vec<MemoryType>) -> Result<(), String> {
         let t = match self.memory_layout.get(&address) {
             Some(v) => *v,
-            None => return Err(format!("Address out of bounds: {}", address))
+            None => return Err(format!("Address out of bounds: {:04X}", address)),
         };
 
-        if t != expected {
-            return Err(format!("Expected {} at {}, got {}", expected, address, t));
+        if !expected.contains(&t) {
+            return Err(format!(
+                "Expected {} at {}, got {}",
+                expected
+                    .iter()
+                    .map(|v| v.to_string())
+                    .fold(String::new(), |a, b| format!("{}, {}", a, b)),
+                address,
+                t
+            ));
         }
-        
+
         Ok(())
-    } 
+    }
 
     fn safe_put_u8(&mut self, v: u8) -> Result<usize, String> {
-        self.check_memory_type(self.cursor(), MemoryType::ROM)?;
+        self.check_memory_type(self.cursor(), vec![MemoryType::ROM])?;
         self.writer.put_u8(v)
     }
 
     fn safe_put_u16(&mut self, v: u16) -> Result<usize, String> {
-        self.check_memory_type(self.cursor(), MemoryType::ROM)?;
+        self.check_memory_type(self.cursor(), vec![MemoryType::ROM])?;
         self.writer.put_u16(v)
     }
 
@@ -460,17 +468,24 @@ impl Assembler {
     }
 
     pub fn set_u8(&mut self, address: u16, value: u8) -> Result<(), String> {
-        self.check_memory_type(address, MemoryType::ROM)?;
+        self.check_memory_type(address, vec![MemoryType::ROM])?;
         self.writer.set_u8(address as usize, value)
     }
 
     pub fn set_u16(&mut self, address: u16, value: u16) -> Result<(), String> {
-        self.check_memory_type(address, MemoryType::ROM)?;
+        self.check_memory_type(address, vec![MemoryType::ROM])?;
         self.writer.set_u16(address as usize, value)
     }
 
     pub fn set_memory_type(&mut self, range: Range<u16>, t: MemoryType) {
         self.memory_layout.insert(range, t);
+    }
+
+    pub fn get_memory_type(&self, address: u16) -> Result<MemoryType, String> {
+        match self.memory_layout.get(&address) {
+            Some(v) => Ok(*v),
+            None => Err(format!("Address out of bounds: {:04X}", address))
+        }
     }
 
     pub fn org(&mut self, address: u16) -> Result<(), String> {

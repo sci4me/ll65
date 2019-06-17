@@ -117,8 +117,8 @@ impl Parser {
             TokenKind::Label(v) => {
                 self.next()?;
                 Ok(NodeKind::Label(LabelNode { value: v }))
-            },
-            _ => Err(self.unexpected_token_error(&vec![TokenKind::Label("".to_string())]))
+            }
+            _ => Err(self.unexpected_token_error(&vec![TokenKind::Label("".to_string())])),
         }
     }
 
@@ -136,7 +136,8 @@ impl Parser {
         match self.current().kind {
             TokenKind::Int(v) => {
                 self.next()?;
-                v.parse::<usize>().map_err(|_| self.format_error("Failed to parse int".to_string()))
+                v.parse::<usize>()
+                    .map_err(|_| self.format_error("Failed to parse int".to_string()))
             }
             _ => Err(self.unexpected_token_error(&vec![TokenKind::Int("".to_string())])),
         }
@@ -192,15 +193,15 @@ impl Parser {
             TokenKind::Ident(v) => {
                 self.next()?;
                 v
-            },
-            _ => return Err(self.unexpected_token_error(&vec![TokenKind::Ident("".to_string())]))
+            }
+            _ => return Err(self.unexpected_token_error(&vec![TokenKind::Ident("".to_string())])),
         };
 
         let mut parameters = Vec::new();
         while self.more() {
             match self.current().kind {
                 TokenKind::Variable(v) => parameters.push(v),
-                _ => break
+                _ => break,
             }
         }
 
@@ -213,7 +214,7 @@ impl Parser {
         Ok(NodeKind::Macro(MacroNode {
             name,
             parameters,
-            body
+            body,
         }))
     }
 
@@ -229,10 +230,14 @@ impl Parser {
             TokenKind::Byte => unimplemented!(),
             TokenKind::Word => unimplemented!(),
             TokenKind::Adc => {
-                self.expect(&vec![TokenKind::Ident("".to_string()), TokenKind::Int("".to_string()), TokenKind::Lbrack])?;
+                self.expect(&vec![
+                    TokenKind::Ident("".to_string()),
+                    TokenKind::Int("".to_string()),
+                    TokenKind::Lbrack,
+                ])?;
 
                 Err("todo".to_string())
-            },
+            }
             _ => {
                 self.expect(&vec![
                     TokenKind::And,
@@ -319,7 +324,7 @@ impl Parser {
             TokenKind::IrqVector => self.parse_irq_vector(),
             TokenKind::NmiVector => self.parse_nmi_vector(),
             TokenKind::Macro => self.parse_macro(),
-            _ => self.parse_mid_level()
+            _ => self.parse_mid_level(),
         }
     }
 

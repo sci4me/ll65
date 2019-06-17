@@ -12,7 +12,8 @@ mod tests {
     use super::opcodes::*;
 
     fn emit_code(asm: &mut Assembler) -> Result<(), String> {
-        asm.set_memory_type(0x0000..0x7FFF, MemoryType::RAM);
+        asm.set_memory_type(0x0000..0x7EFF, MemoryType::RAM);
+        asm.set_memory_type(0x7F00..0x7FFF, MemoryType::IO);
         asm.set_memory_type(0x8000..0xFFFF, MemoryType::ROM);
 
         asm.org(0x8000)?;
@@ -21,15 +22,18 @@ mod tests {
         let nmi = asm.label();
         let reset = asm.label();
 
-        asm.mark(irq)?; {
+        asm.mark(irq)?;
+        {
             asm.rti()?;
         }
 
-        asm.mark(nmi)?; {
+        asm.mark(nmi)?;
+        {
             asm.rti()?;
         }
 
-        asm.mark(reset)?; {
+        asm.mark(reset)?;
+        {
             let l = asm.label();
             asm.mark(l)?;
             asm.nop()?;
@@ -48,7 +52,7 @@ mod tests {
         let mut asm = Assembler::new(0x10000);
 
         match emit_code(&mut asm) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 eprintln!("{}", e);
                 panic!("Failed!");
