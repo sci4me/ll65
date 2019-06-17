@@ -1,8 +1,29 @@
 use crate::asm::binary_writer::BinaryWriter;
 use crate::asm::opcodes::OpCode;
 use paste;
+use rangemap::RangeMap;
 use std::collections::HashMap;
 use std::fmt;
+use std::ops::Range;
+
+#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
+pub enum MemoryType {
+    RAM,
+    ROM,
+    IO,
+    NONE
+}
+
+impl fmt::Display for MemoryType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MemoryType::RAM => write!(f, "RAM"),
+            MemoryType::ROM => write!(f, "ROM"),
+            MemoryType::IO => write!(f, "IO"),
+            MemoryType::NONE => write!(f, "NONE")
+        }
+    }
+}
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 pub enum Ref {
@@ -58,7 +79,7 @@ macro_rules! generate_relative_instructions {
 
                 pub fn [<$name _relative_immediate>](&mut self, offset: i8) -> Result<(), String> {
                     self.put_opcode(paste::expr! { OpCode::[<$op _REL>] })?;
-                    self.writer.put_u8(offset as u8).map(|_| ())
+                    self.safe_put_u8(offset as u8).map(|_| ())
                 }
             }
         )*
@@ -123,7 +144,7 @@ macro_rules! generate_immediate_instructions {
             paste::item! {
                 pub fn [<$name _immediate>](&mut self, value: u8) -> Result<(), String> {
                     self.put_opcode(paste::expr! { OpCode::[<$op _IMM>] })?;
-                    self.writer.put_u8(value).map(|_| ())
+                    self.safe_put_u8(value).map(|_| ())
                 }
             }
         )*
@@ -136,7 +157,7 @@ macro_rules! generate_indirect_x_instructions {
             paste::item! {
                 pub fn [<$name _indirect_x>](&mut self, value: u8) -> Result<(), String> {
                     self.put_opcode(paste::expr! { OpCode::[<$op _INX>] })?;
-                    self.writer.put_u8(value).map(|_| ())
+                    self.safe_put_u8(value).map(|_| ())
                 }
             }
         )*
@@ -149,7 +170,7 @@ macro_rules! generate_indirect_y_instructions {
             paste::item! {
                 pub fn [<$name _indirect_y>](&mut self, value: u8) -> Result<(), String> {
                     self.put_opcode(paste::expr! { OpCode::[<$op _INY>] })?;
-                    self.writer.put_u8(value).map(|_| ())
+                    self.safe_put_u8(value).map(|_| ())
                 }
             }
         )*
@@ -162,7 +183,7 @@ macro_rules! generate_zp_instructions {
             paste::item! {
                 pub fn [<$name _zp>](&mut self, address: u8) -> Result<(), String> {
                     self.put_opcode(paste::expr! { OpCode::[<$op _ZP>] })?;
-                    self.writer.put_u8(address).map(|_| ())
+                    self.safe_put_u8(address).map(|_| ())
                 }
             }
         )*
@@ -175,7 +196,7 @@ macro_rules! generate_zpx_instructions {
             paste::item! {
                 pub fn [<$name _zpx>](&mut self, address: u8) -> Result<(), String> {
                     self.put_opcode(paste::expr! { OpCode::[<$op _ZPX>] })?;
-                    self.writer.put_u8(address).map(|_| ())
+                    self.safe_put_u8(address).map(|_| ())
                 }
             }
         )*
@@ -188,7 +209,7 @@ macro_rules! generate_zpy_instructions {
             paste::item! {
                 pub fn [<$name _zpy>](&mut self, address: u8) -> Result<(), String> {
                     self.put_opcode(paste::expr! { OpCode::[<$op _ZPY>] })?;
-                    self.writer.put_u8(address).map(|_| ())
+                    self.safe_put_u8(address).map(|_| ())
                 }
             }
         )*
@@ -201,7 +222,7 @@ macro_rules! generate_indirect_zp_instructions {
             paste::item! {
                 pub fn [<$name _indirect_zp>](&mut self, address: u8) -> Result<(), String> {
                     self.put_opcode(paste::expr! { OpCode::[<$op _INZP>] })?;
-                    self.writer.put_u8(address).map(|_| ())
+                    self.safe_put_u8(address).map(|_| ())
                 }
             }
         )*
@@ -234,34 +255,66 @@ pub struct Assembler {
     patch_locations: HashMap<Ref, Vec<u16>>,
     relative_patch_locations: HashMap<Ref, Vec<u16>>,
     label_locations: HashMap<Ref, u16>,
+    memory_layout: RangeMap<u16, MemoryType>
 }
 
 impl Assembler {
     pub fn new(capacity: usize) -> Self {
-        Self {
+        let mut result = Self {
             writer: BinaryWriter::new(capacity),
             next_label: 0,
             patch_locations: HashMap::new(),
             relative_patch_locations: HashMap::new(),
             label_locations: HashMap::new(),
+            memory_layout: RangeMap::new()
+        };
+        result.build_default_memory_layout();
+        result
+    }
+
+    fn build_default_memory_layout(&mut self) {
+        let end = (self.capacity() - 1) as u16;
+        self.memory_layout.insert(0..end, MemoryType::ROM);
+    }
+
+    fn check_memory_type(&self, address: u16, expected: MemoryType) -> Result<(), String> {
+        let t = match self.memory_layout.get(&address) {
+            Some(v) => *v,
+            None => return Err(format!("Address out of bounds: {}", address))
+        };
+
+        if t != expected {
+            return Err(format!("Expected {} at {}, got {}", expected, address, t));
         }
+        
+        Ok(())
+    } 
+
+    fn safe_put_u8(&mut self, v: u8) -> Result<usize, String> {
+        self.check_memory_type(self.cursor(), MemoryType::ROM)?;
+        self.writer.put_u8(v)
+    }
+
+    fn safe_put_u16(&mut self, v: u16) -> Result<usize, String> {
+        self.check_memory_type(self.cursor(), MemoryType::ROM)?;
+        self.writer.put_u16(v)
     }
 
     fn put_address(&mut self, address: Ref) -> Result<(), String> {
         match address {
             Ref::Label(_) => {
-                let placeholder = self.writer.put_u16(0)?;
+                let placeholder = self.safe_put_u16(0)?;
                 self.mark_patch_location(address, placeholder as u16);
             }
             Ref::Address(address) => {
-                self.writer.put_u16(address).map(|_| ())?;
+                self.safe_put_u16(address).map(|_| ())?;
             }
         }
         Ok(())
     }
 
     fn put_relative_address(&mut self, address: Ref) -> Result<(), String> {
-        let placeholder = self.writer.put_u8(0)?;
+        let placeholder = self.safe_put_u8(0)?;
         match address {
             Ref::Label(_) => {
                 self.mark_relative_patch_location(address, placeholder as u16);
@@ -303,7 +356,7 @@ impl Assembler {
     }
 
     fn put_opcode(&mut self, opcode: OpCode) -> Result<(), String> {
-        self.writer.put_u8(opcode as u8).map(|_| ())
+        self.safe_put_u8(opcode as u8).map(|_| ())
     }
 
     fn fixup_patches(&mut self) {
@@ -407,11 +460,21 @@ impl Assembler {
     }
 
     pub fn set_u8(&mut self, address: u16, value: u8) -> Result<(), String> {
+        self.check_memory_type(address, MemoryType::ROM)?;
         self.writer.set_u8(address as usize, value)
     }
 
     pub fn set_u16(&mut self, address: u16, value: u16) -> Result<(), String> {
+        self.check_memory_type(address, MemoryType::ROM)?;
         self.writer.set_u16(address as usize, value)
+    }
+
+    pub fn set_memory_type(&mut self, range: Range<u16>, t: MemoryType) {
+        self.memory_layout.insert(range, t);
+    }
+
+    pub fn org(&mut self, address: u16) -> Result<(), String> {
+        self.writer.set_cursor(address as usize)
     }
 
     generate_instructions!(

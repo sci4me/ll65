@@ -31,6 +31,15 @@ impl BinaryWriter {
         self.cursor
     }
 
+    pub fn set_cursor(&mut self, cursor: usize) -> Result<(), String> {
+        if cursor >= self.data.len() {
+            Err(format!("Cursor out of bounds: {}", cursor))
+        } else {
+            self.cursor = cursor;
+            Ok(())
+        }
+    }
+
     pub fn as_bytes(&self) -> &[u8] {
         self.data.as_slice()
     }

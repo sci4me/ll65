@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 paste = "0.1.5"
 clap = "2.33.0"
+rangemap = "0.1.3"
 
 [[bin]]
 name = "ll65"
