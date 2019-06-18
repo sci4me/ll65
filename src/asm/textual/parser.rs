@@ -136,21 +136,28 @@ impl Parser {
         match self.current().kind {
             TokenKind::Int(v) => {
                 self.next()?;
-                v.parse::<usize>()
-                    .map_err(|_| self.format_error("Failed to parse int".to_string()))
+                match v.parse::<usize>()
+                    .map_err(|_| self.format_error("Failed to parse int".to_string())) {
+                    Ok(r) => if r > max {
+                        Err(format!("Number ({}) exceeds max value {}", r, max))
+                    } else {
+                        Ok(r)
+                    },
+                    Err(e) => Err(e) 
+                }
             }
             _ => Err(self.unexpected_token_error(&vec![TokenKind::Int("".to_string())])),
         }
     }
 
     fn parse_byte(&mut self) -> Result<NodeKind, String> {
-        self.parse_int(255)
+        self.parse_int(0xFF)
             .map(|x| NodeKind::Byte(ByteNode { value: x as u8 }))
     }
 
     fn parse_word(&mut self) -> Result<NodeKind, String> {
-        self.parse_int(65535)
-            .map(|x| NodeKind::Byte(ByteNode { value: x as u8 }))
+        self.parse_int(0xFFFF)
+            .map(|x| NodeKind::Word(WordNode { value: x as u16 }))
     }
 
     fn parse_address(&mut self) -> Result<NodeKind, String> {
@@ -218,6 +225,20 @@ impl Parser {
         }))
     }
 
+    fn parse_emit_byte(&mut self) -> Result<NodeKind, String> {
+        self.expect_next(&vec![TokenKind::Byte])?;
+        Ok(NodeKind::EmitByte(EmitByteNode {
+            value: self.parse_int(0xFF)? as u8
+        }))
+    }
+
+    fn parse_emit_word(&mut self) -> Result<NodeKind, String> {
+        self.expect_next(&vec![TokenKind::Byte])?;
+        Ok(NodeKind::EmitWord(EmitWordNode {
+            value: self.parse_int(0xFFFF)? as u16
+        }))
+    }
+
     fn parse_mid_level(&mut self) -> Result<NodeKind, String> {
         let current = self.current();
         match current.kind {
@@ -227,14 +248,16 @@ impl Parser {
             TokenKind::Elif => unimplemented!(),
             TokenKind::Else => unimplemented!(),
             TokenKind::For => unimplemented!(),
-            TokenKind::Byte => unimplemented!(),
-            TokenKind::Word => unimplemented!(),
+            TokenKind::Byte => self.parse_emit_byte(),
+            TokenKind::Word => self.parse_emit_word(),
             TokenKind::Adc => {
                 self.expect(&vec![
                     TokenKind::Ident("".to_string()),
                     TokenKind::Int("".to_string()),
                     TokenKind::Lbrack,
                 ])?;
+
+                
 
                 Err("todo".to_string())
             }

@@ -11,6 +11,8 @@ pub enum NodeKind {
     Macro(MacroNode),
     If(IfNode),
     For(ForNode),
+    EmitByte(EmitByteNode),
+    EmitWord(EmitWordNode),
     Byte(ByteNode),
     Word(WordNode),
     Binary(BinaryNode),
@@ -85,6 +87,16 @@ pub struct LabelNode {
 #[derive(Debug)]
 pub struct IdentNode {
     pub value: String,
+}
+
+#[derive(Debug)]
+pub struct EmitByteNode {
+    pub value: u8
+}
+
+#[derive(Debug)]
+pub struct EmitWordNode {
+    pub value: u16
 }
 
 #[derive(Debug)]

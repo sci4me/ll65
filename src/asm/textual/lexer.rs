@@ -288,7 +288,6 @@ impl fmt::Display for TokenKind {
             TokenKind::Ply => write!(f, "Ply"),
             TokenKind::Wai => write!(f, "Wai"),
             TokenKind::Stp => write!(f, "Stp"),
-            _ => unreachable!(),
         }
     }
 }
@@ -411,7 +410,6 @@ impl TokenKind {
             TokenKind::Ply => "Ply",
             TokenKind::Wai => "Wai",
             TokenKind::Stp => "Stp",
-            _ => unreachable!(),
         }
     }
 }
